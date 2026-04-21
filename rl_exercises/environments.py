@@ -201,6 +201,8 @@ class MarsRover(gym.Env):
             for a in A:
                 s_next = max(0, min(nS - 1, s + (-1 if a == 0 else 1)))
                 T[s, a, s_next] = float(P[s, a])
+        # Check whether every transition is 100% since it allways succeeds!
+        assert np.allclose(T.sum(axis=2), 1.0)
         return T
 
     def render(self, mode: str = "human"):
@@ -213,6 +215,12 @@ class MarsRover(gym.Env):
             Render mode (only "human" is supported).
         """
         print(f"[MarsRover] pos={self.position}, steps={self.current_steps}")
+
+    def get_next_state(self, state: int, action: int) -> int:
+        # print(len(self.states))
+        if action == 0:
+            return max(0, state - 1)
+        return min(len(self.states) - 1, state + 1)
 
 
 class MarsRoverPartialObsWrapper(gym.Wrapper):

@@ -1,8 +1,6 @@
-from __future__ import annotations
-
 import matplotlib.pyplot as plt  # type: ignore[import]
 import numpy as np
-from matplotlib.offsetbox import AnnotationBbox, OffsetImage  # type: ignore[import]
+from matplotlib.offsetbox import AnnotationBbox  # type: ignore[import]
 from rich import print as printr
 from rl_exercises.environments import MarsRover
 
@@ -24,8 +22,6 @@ for i in range(env.horizon):
 
 # Plot
 fig, ax = plt.subplots()
-image = plt.imread("figures/alien_1f47d.png")
-image_box = OffsetImage(image, zoom=0.1)
 x = np.arange(0, len(states))
 y = states
 for x0, y0 in zip(x, y):
