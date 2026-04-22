@@ -2,3 +2,4 @@
 agent: policy_iteration
 agent_name: policy_iteration
 agent_class: PolicyIteration
+env_name: MarsRover

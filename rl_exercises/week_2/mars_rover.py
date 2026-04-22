@@ -4,7 +4,7 @@ import pathlib
 
 import matplotlib.pyplot as plt  # type: ignore[import]
 import numpy as np
-from matplotlib.offsetbox import AnnotationBbox, OffsetImage  # type: ignore[import]
+from matplotlib.offsetbox import AnnotationBbox  # type: ignore[import]
 from rich import print as printr
 from rl_exercises.environments import MarsRover
 

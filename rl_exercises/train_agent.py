@@ -53,10 +53,13 @@ def train(cfg: DictConfig) -> float:
     """
     env = make_env(cfg.env_name)
     printr(cfg)
-    if cfg.agent == "sb3":
+    if cfg.agent_name == "sb3":
         return train_sb3(env, cfg)
-    elif cfg.agent == "random":
+    elif cfg.agent_name == "random":
         agent = RandomAgent(env)
+    elif cfg.agent_name == "policy_iteration":
+        print("|Policy Iteration|")
+        return policy_iteration(env, cfg)
     else:
         # TODO: add your agent options here
         raise NotImplementedError
@@ -107,6 +110,11 @@ def train(cfg: DictConfig) -> float:
     final_eval = evaluate(env, agent, cfg.n_eval_episodes)
     print(f"Final eval reward was: {final_eval}")
     return final_eval
+
+
+def policy_iteration(env: gym.Env, cfg: DictConfig) -> float:
+
+    return 0.0
 
 
 def train_sb3(env: gym.Env, cfg: DictConfig) -> float:
