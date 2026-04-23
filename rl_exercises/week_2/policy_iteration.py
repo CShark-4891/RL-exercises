@@ -2,10 +2,16 @@ from __future__ import annotations
 
 from typing import Any
 
+from pathlib import Path
+import sys
 import warnings
 
 import numpy as np
 from rich import print as printr
+
+if __package__ is None or __package__ == "":
+    sys.path.append(str(Path(__file__).resolve().parents[2]))
+
 from rl_exercises.agent import AbstractAgent
 from rl_exercises.environments import MarsRover
 
@@ -83,6 +89,8 @@ class PolicyIteration(AbstractAgent):
         tuple[int, dict]
             The selected action and an empty info dictionary.
         """
+        if not self.policy_fitted:
+            self.update_agent()
         action = self.pi[observation]
         info = {}
         return action, info

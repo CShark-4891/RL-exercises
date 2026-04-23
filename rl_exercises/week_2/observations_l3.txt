@@ -1,0 +1,54 @@
+Level 3 observations
+
+Setup
+- Context features: `follow_prob` and `goal_reward`
+- Train contexts: 0 and 1
+- Validation context: 2
+- Test context: 3
+- Context schedule during training/evaluation: round robin
+
+I compared two planning settings in `contextual_experiment.py`:
+1. Hidden-context planning: the agent does not observe the context and plans on the
+   averaged training MDP.
+2. Context-aware oracle planning: the agent receives the context and plans with all
+   context-specific state blocks available.
+
+Observed returns
+- Hidden-context planning:
+  train = 69.00
+  validation = 8.70
+  test = 9.00
+- Context-aware oracle planning:
+  train = 69.00
+  validation = 8.90
+  test = 24.25
+
+Policy iteration and value iteration produced the same returns in all of these runs.
+That is expected here because both methods solve the same small tabular MDP exactly.
+
+Interpretation
+- On the training contexts, both representations perform equally well because the
+  optimal action is to move right in both training contexts.
+- On the validation context, the gain from context information is small. The context
+  changes the optimal decision only in a limited part of the state space, so the
+  averaged hidden-context policy is already close to optimal.
+- On the test context, the difference is much larger. The hidden-context agent keeps
+  using a training-average "move right" strategy, while the context-aware oracle can
+  switch to the safer left-going strategy that is better in the hostile slip setting.
+
+Where this differs from the paper
+- The paper studies generalization in richer cMDPs, while this exercise uses a tiny
+  hand-designed tabular environment.
+- A tabular context-aware policy does not really generalize to unseen contexts by
+  itself; it only works well here as an oracle because we explicitly include context-
+  specific state blocks in the model.
+- Because the environment is so small, policy iteration and value iteration collapse to
+  nearly identical behavior, whereas larger benchmarks can show bigger optimization and
+  representation differences.
+
+What is similar to the paper
+- Train/validation/test context splits matter.
+- Averaging over training contexts can hide important structure and hurt out-of-
+  distribution performance.
+- Providing context can improve decision quality when the optimal policy truly depends
+  on that context.

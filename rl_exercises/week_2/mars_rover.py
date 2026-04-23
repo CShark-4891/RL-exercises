@@ -1,7 +1,14 @@
 import matplotlib.pyplot as plt  # type: ignore[import]
 import numpy as np
-from matplotlib.offsetbox import AnnotationBbox  # type: ignore[import]
 from rich import print as printr
+from pathlib import Path
+import sys
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+if __package__ is None or __package__ == "":
+    sys.path.append(str(PROJECT_ROOT))
+
 from rl_exercises.environments import MarsRover
 
 env = MarsRover()
@@ -24,10 +31,20 @@ for i in range(env.horizon):
 fig, ax = plt.subplots()
 x = np.arange(0, len(states))
 y = states
-for x0, y0 in zip(x, y):
-    ab = AnnotationBbox(image_box, (x0, y0), frameon=False)
-    ax.add_artist(ab)
+# This image-box variant did not work here because `image_box` was never
+# defined, so the plot failed before rendering.
+# from matplotlib.offsetbox import AnnotationBbox  # type: ignore[import]
+# for x0, y0 in zip(x, y):
+#     ab = AnnotationBbox(image_box, (x0, y0), frameon=False)
+#     ax.add_artist(ab)
 ax.plot(x, y, c="green")
 ax.set_xlabel("Step")
 ax.set_ylabel("State")
+
+output_dir = PROJECT_ROOT / "results"
+output_dir.mkdir(parents=True, exist_ok=True)
+output_path = output_dir / "task1_mars_rover_trajectory.pdf"
+fig.savefig(output_path, bbox_inches="tight")
+printr(f"Saved plot to: {output_path}")
+
 plt.show()

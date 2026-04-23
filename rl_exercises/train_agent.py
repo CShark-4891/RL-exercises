@@ -3,13 +3,19 @@
 from typing import Any, List, SupportsFloat
 
 import os
+import sys
 import warnings
 from functools import partial
+from pathlib import Path
 
 import gymnasium as gym
 import hydra
 import numpy as np
 import pandas as pd
+
+if __package__ is None or __package__ == "":
+    sys.path.append(str(Path(__file__).resolve().parents[1]))
+
 import rl_exercises
 from gymnasium.core import Env
 from gymnasium.wrappers import TimeLimit
@@ -19,7 +25,8 @@ from omegaconf import DictConfig, OmegaConf
 from rich import print as printr
 from rl_exercises.agent import AbstractAgent, RandomAgent
 from rl_exercises.agent.buffer import SimpleBuffer
-from rl_exercises.environments import MarsRover
+from rl_exercises.environments import ContextualMarsRover, MarsRover
+from rl_exercises.week_2 import PolicyIteration, ValueIteration
 
 # from rl_exercises.week_4 import EpsilonGreedyPolicy as TabularEpsilonGreedyPolicy
 # from rl_exercises.week_4 import SARSAAgent
@@ -51,15 +58,14 @@ def train(cfg: DictConfig) -> float:
     NotImplementedError
         _description_
     """
-    env = make_env(cfg.env_name)
+    env = make_env(cfg.env_name, cfg.env_kwargs)
     printr(cfg)
     if cfg.agent_name == "sb3":
         return train_sb3(env, cfg)
     elif cfg.agent_name == "random":
         agent = RandomAgent(env)
-    elif cfg.agent_name == "policy_iteration":
-        print("|Policy Iteration|")
-        return policy_iteration(env, cfg)
+    elif cfg.agent_name in {"policy_iteration", "value_iteration"}:
+        return train_planning_agent(env, cfg)
     else:
         # TODO: add your agent options here
         raise NotImplementedError
@@ -112,9 +118,27 @@ def train(cfg: DictConfig) -> float:
     return final_eval
 
 
-def policy_iteration(env: gym.Env, cfg: DictConfig) -> float:
+def train_planning_agent(env: gym.Env, cfg: DictConfig) -> float:
+    """Train and evaluate dynamic-programming agents with exact models."""
+    agent_classes = {
+        "PolicyIteration": PolicyIteration,
+        "ValueIteration": ValueIteration,
+    }
+    model_path = os.path.abspath("model.npy")
+    agent_class = agent_classes[cfg.agent_class]
+    agent = agent_class(
+        env=env,
+        seed=cfg.seed,
+        filename=model_path,
+        **cfg.agent_kwargs,
+    )
+    agent.update_agent()
+    agent.save()
 
-    return 0.0
+    eval_env = make_env(cfg.env_name, cfg.env_kwargs)
+    final_eval = evaluate(eval_env, agent, cfg.n_eval_episodes, cfg.seed)
+    print(f"Final eval reward was: {final_eval}")
+    return final_eval
 
 
 def train_sb3(env: gym.Env, cfg: DictConfig) -> float:
@@ -176,8 +200,8 @@ def evaluate(
     """
     episode_rewards: List[float] = []
     pbar = tqdm(total=episodes)
-    for _ in range(episodes):
-        obs, info = env.reset(seed=seed)
+    for episode_idx in range(episodes):
+        obs, info = env.reset(seed=seed + episode_idx)
         episode_rewards.append(0)
         done = False
         episode_steps = 0
@@ -199,7 +223,7 @@ def evaluate(
     return np.mean(episode_rewards)
 
 
-def make_env(env_name: str, env_kwargs: dict = {}) -> gym.Env:
+def make_env(env_name: str, env_kwargs: dict | None = None) -> gym.Env:
     """Make environment based on name and kwargs.
 
     Parameters
@@ -214,9 +238,13 @@ def make_env(env_name: str, env_kwargs: dict = {}) -> gym.Env:
     gym.Env
         Instantiated env
     """
+    env_kwargs = {} if env_kwargs is None else dict(env_kwargs)
+
     if env_name == "MarsRover":
         env = MarsRover(**env_kwargs)
         # env = TimeLimit(env, max_episode_steps=env.horizon)
+    elif env_name == "ContextualMarsRover":
+        env = ContextualMarsRover(**env_kwargs)
     elif "MiniGrid" in env_name:
         env = gym.make(env_name, **env_kwargs)
         # env = RGBImgObsWrapper(env)

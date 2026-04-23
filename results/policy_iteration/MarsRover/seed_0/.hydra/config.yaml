@@ -1,0 +1,15 @@
+agent: policy_iteration
+agent_name: policy_iteration
+agent_class: PolicyIteration
+env_name: MarsRover
+seed: 0
+training_steps: 100000.0
+env_kwargs: {}
+agent_kwargs: {}
+eval_every_n_steps: 1000
+n_eval_episodes: 1
+outpath: results
+buffer_cls: SimpleBuffer
+buffer_kwargs: {}
+batch_size: 64
+update_after_episode_end: false
