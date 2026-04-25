@@ -1,0 +1,13 @@
+algorithm,representation,split,mean_return
+PolicyIteration,hidden_context_average_train,train,69.0
+PolicyIteration,hidden_context_average_train,validation,8.7
+PolicyIteration,hidden_context_average_train,test,9.0
+ValueIteration,hidden_context_average_train,train,69.0
+ValueIteration,hidden_context_average_train,validation,8.7
+ValueIteration,hidden_context_average_train,test,9.0
+PolicyIteration,context_aware_oracle_all_contexts,train,69.0
+PolicyIteration,context_aware_oracle_all_contexts,validation,8.9
+PolicyIteration,context_aware_oracle_all_contexts,test,24.25
+ValueIteration,context_aware_oracle_all_contexts,train,69.0
+ValueIteration,context_aware_oracle_all_contexts,validation,8.9
+ValueIteration,context_aware_oracle_all_contexts,test,24.25

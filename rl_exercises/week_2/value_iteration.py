@@ -2,9 +2,17 @@ from __future__ import annotations
 
 from typing import Any, Tuple
 
+from pathlib import Path
+import sys
+import warnings
+
 import gymnasium
 import numpy as np
 from rich import print as printr
+
+if __package__ is None or __package__ == "":
+    sys.path.append(str(Path(__file__).resolve().parents[2]))
+
 from rl_exercises.agent import AbstractAgent
 from rl_exercises.environments import MarsRover
 
@@ -37,6 +45,7 @@ class ValueIteration(AbstractAgent):
         env: MarsRover | gymnasium.Env,
         gamma: float = 0.9,
         seed: int = 333,
+        filename: str = "value_policy.npy",
         **kwargs: dict,
     ) -> None:
         if hasattr(env, "unwrapped"):
@@ -46,6 +55,7 @@ class ValueIteration(AbstractAgent):
         self.env = env
         self.gamma = gamma
         self.seed = seed
+        self.filename = filename
 
         # extract MDP
         self.S = env.states  # array of state indices
@@ -85,6 +95,19 @@ class ValueIteration(AbstractAgent):
 
         # TODO: Return action from learned policy
         raise NotImplementedError("predict_action() is not implemented.")
+
+    def save(self, *args: tuple[Any], **kwargs: dict) -> None:
+        """Save the learned policy as a NumPy array."""
+        if self.policy_fitted:
+            np.save(self.filename, np.array(self.pi))
+        else:
+            warnings.warn("Tried to save policy but value iteration has not run yet.")
+
+    def load(self, *args: tuple[Any], **kwargs: dict) -> np.ndarray:
+        """Load a previously saved policy."""
+        self.pi = np.load(self.filename)
+        self.policy_fitted = True
+        return self.pi
 
 
 def value_iteration(
