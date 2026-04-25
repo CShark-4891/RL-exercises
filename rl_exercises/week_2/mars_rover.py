@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+import pathlib
+
 import matplotlib.pyplot as plt  # type: ignore[import]
 import numpy as np
 from rich import print as printr
@@ -10,6 +14,8 @@ if __package__ is None or __package__ == "":
     sys.path.append(str(PROJECT_ROOT))
 
 from rl_exercises.environments import MarsRover
+
+script_dir = pathlib.Path(__file__).parent.resolve()
 
 env = MarsRover()
 actions = [0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0]
@@ -29,6 +35,8 @@ for i in range(env.horizon):
 
 # Plot
 fig, ax = plt.subplots()
+image = plt.imread(script_dir / "figures" / "alien_1f47d.png")
+image_box = OffsetImage(image, zoom=0.1)
 x = np.arange(0, len(states))
 y = states
 # This image-box variant did not work here because `image_box` was never
