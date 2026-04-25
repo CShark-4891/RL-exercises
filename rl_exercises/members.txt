@@ -1,3 +1,3 @@
-member 1: me
-member 2: 
-member 3: 
+member 1: Simon Böke
+member 2: Alex Alfonso Trigo
+member 3: Hannes Brunnenberg
