@@ -2,10 +2,18 @@ from __future__ import annotations
 
 import pathlib
 
+from matplotlib.offsetbox import AnnotationBbox, OffsetImage
 import matplotlib.pyplot as plt  # type: ignore[import]
 import numpy as np
-from matplotlib.offsetbox import AnnotationBbox  # type: ignore[import]
 from rich import print as printr
+from pathlib import Path
+import sys
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+if __package__ is None or __package__ == "":
+    sys.path.append(str(PROJECT_ROOT))
+
 from rl_exercises.environments import MarsRover
 
 script_dir = pathlib.Path(__file__).parent.resolve()
@@ -38,4 +46,11 @@ for x0, y0 in zip(x, y):
 ax.plot(x, y, c="green")
 ax.set_xlabel("Step")
 ax.set_ylabel("State")
-fig.savefig(script_dir / "figures" / "mars_rover.png")
+
+output_dir = PROJECT_ROOT / "results"
+output_dir.mkdir(parents=True, exist_ok=True)
+output_path = output_dir / "task1_mars_rover_trajectory.pdf"
+fig.savefig(output_path, bbox_inches="tight")
+printr(f"Saved plot to: {output_path}")
+
+plt.show()

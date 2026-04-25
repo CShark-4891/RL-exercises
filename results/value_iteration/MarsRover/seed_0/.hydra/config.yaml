@@ -1,0 +1,28 @@
+agent_class: ValueIteration
+agent_name: value_iteration
+log_dir: results
+verbose: true
+seed: 0
+training_steps: 1
+env_name: MarsRover
+env_kwargs:
+  transition_probabilities:
+  - - 0.5
+    - 0.5
+  - - 0.5
+    - 0.5
+  - - 0.5
+    - 0.5
+  - - 0.5
+    - 0.5
+  - - 0.5
+    - 0.5
+agent_kwargs: {}
+eval_every_n_steps: 1000
+n_eval_episodes: 1
+outpath: results
+buffer_cls: SimpleBuffer
+buffer_kwargs: {}
+batch_size: 0
+update_after_episode_end: false
+agent: value_iteration

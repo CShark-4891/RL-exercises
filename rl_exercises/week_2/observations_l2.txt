@@ -1,0 +1,9 @@
+Level 2 observations
+
+If we only have access to `step()`, policy iteration and value iteration do not work
+directly anymore. Both methods need the transition probabilities and the reward
+function for their Bellman updates.
+
+So in this setting we would first have to learn or estimate a model from data, or use
+a model-free RL method instead. That also means the result depends more on the amount
+and quality of the data.
