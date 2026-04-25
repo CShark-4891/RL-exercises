@@ -1,2 +1,1 @@
-- agent=policy_iteration
-- env_name=MarsRover
+- +exercise=w2_policy_iteration

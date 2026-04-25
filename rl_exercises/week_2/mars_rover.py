@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pathlib
 
+from matplotlib.offsetbox import AnnotationBbox, OffsetImage
 import matplotlib.pyplot as plt  # type: ignore[import]
 import numpy as np
 from rich import print as printr
@@ -39,12 +40,9 @@ image = plt.imread(script_dir / "figures" / "alien_1f47d.png")
 image_box = OffsetImage(image, zoom=0.1)
 x = np.arange(0, len(states))
 y = states
-# This image-box variant did not work here because `image_box` was never
-# defined, so the plot failed before rendering.
-# from matplotlib.offsetbox import AnnotationBbox  # type: ignore[import]
-# for x0, y0 in zip(x, y):
-#     ab = AnnotationBbox(image_box, (x0, y0), frameon=False)
-#     ax.add_artist(ab)
+for x0, y0 in zip(x, y):
+    ab = AnnotationBbox(image_box, (x0, y0), frameon=False)
+    ax.add_artist(ab)
 ax.plot(x, y, c="green")
 ax.set_xlabel("Step")
 ax.set_ylabel("State")

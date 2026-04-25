@@ -112,12 +112,11 @@ hydra:
     hydra:
     - hydra.mode=RUN
     task:
-    - agent=policy_iteration
-    - env_name=MarsRover
+    - +exercise=w2_policy_iteration
   job:
     name: train_agent
     chdir: null
-    override_dirname: agent=policy_iteration,env_name=MarsRover
+    override_dirname: +exercise=w2_policy_iteration
     id: ???
     num: ???
     config_name: base
@@ -131,12 +130,12 @@ hydra:
   runtime:
     version: 1.3.2
     version_base: '1.1'
-    cwd: /home/hannes4409/SS26/RL/RL-exercises
+    cwd: /home/alex/Schreibtisch/uni/reinforcement_learning/RL-exercises
     config_sources:
     - path: hydra.conf
       schema: pkg
       provider: hydra
-    - path: /home/hannes4409/SS26/RL/RL-exercises/rl_exercises/configs
+    - path: /home/alex/Schreibtisch/uni/reinforcement_learning/RL-exercises/rl_exercises/configs
       schema: file
       provider: main
     - path: hydra_plugins.hydra_colorlog.conf
@@ -145,9 +144,11 @@ hydra:
     - path: ''
       schema: structured
       provider: schema
-    output_dir: /home/hannes4409/SS26/RL/RL-exercises/results/policy_iteration/MarsRover/seed_0
+    output_dir: /home/alex/Schreibtisch/uni/reinforcement_learning/RL-exercises/results/policy_iteration/MarsRover/seed_0
     choices:
-      agent: policy_iteration
+      exercise: w2_policy_iteration
+      exercise/../agent@...agent: policy_iteration
+      agent: sb3
       hydra/env: default
       hydra/callbacks: null
       hydra/job_logging: default

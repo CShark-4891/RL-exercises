@@ -112,13 +112,11 @@ hydra:
     hydra:
     - hydra.mode=RUN
     task:
-    - agent=value_iteration
-    - env_name=MarsRover
-    - +env_kwargs.transition_probabilities=[[0.5,0.5],[0.5,0.5],[0.5,0.5],[0.5,0.5],[0.5,0.5]]
+    - +exercise=w2_value_iteration
   job:
     name: train_agent
     chdir: null
-    override_dirname: +env_kwargs.transition_probabilities=[[0.5,0.5],[0.5,0.5],[0.5,0.5],[0.5,0.5],[0.5,0.5]],agent=value_iteration,env_name=MarsRover
+    override_dirname: +exercise=w2_value_iteration
     id: ???
     num: ???
     config_name: base
@@ -132,12 +130,12 @@ hydra:
   runtime:
     version: 1.3.2
     version_base: '1.1'
-    cwd: /home/hannes4409/SS26/RL/RL-exercises
+    cwd: /home/alex/Schreibtisch/uni/reinforcement_learning/RL-exercises
     config_sources:
     - path: hydra.conf
       schema: pkg
       provider: hydra
-    - path: /home/hannes4409/SS26/RL/RL-exercises/rl_exercises/configs
+    - path: /home/alex/Schreibtisch/uni/reinforcement_learning/RL-exercises/rl_exercises/configs
       schema: file
       provider: main
     - path: hydra_plugins.hydra_colorlog.conf
@@ -146,9 +144,11 @@ hydra:
     - path: ''
       schema: structured
       provider: schema
-    output_dir: /home/hannes4409/SS26/RL/RL-exercises/results/value_iteration/MarsRover/seed_0
+    output_dir: /home/alex/Schreibtisch/uni/reinforcement_learning/RL-exercises/results/value_iteration/MarsRover/seed_0
     choices:
-      agent: value_iteration
+      exercise: w2_value_iteration
+      exercise/../agent@...agent: value_iteration
+      agent: sb3
       hydra/env: default
       hydra/callbacks: null
       hydra/job_logging: default

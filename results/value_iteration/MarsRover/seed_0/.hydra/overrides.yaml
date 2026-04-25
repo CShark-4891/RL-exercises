@@ -1,3 +1,1 @@
-- agent=value_iteration
-- env_name=MarsRover
-- +env_kwargs.transition_probabilities=[[0.5,0.5],[0.5,0.5],[0.5,0.5],[0.5,0.5],[0.5,0.5]]
+- +exercise=w2_value_iteration
