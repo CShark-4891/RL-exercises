@@ -13,6 +13,8 @@ import hydra
 import numpy as np
 import pandas as pd
 
+from rl_exercises.week_3.sarsa_qlearning import TDAgent
+
 if __package__ is None or __package__ == "":
     sys.path.append(str(Path(__file__).resolve().parents[1]))
 
@@ -64,7 +66,7 @@ def train(cfg: DictConfig) -> float:
         return train_sb3(env, cfg)
     elif cfg.agent_name == "random":
         agent = RandomAgent(env)
-    elif cfg.agent_name in {"policy_iteration", "value_iteration"}:
+    elif cfg.agent_name in {"policy_iteration", "value_iteration", "sarsa", "qlearning"}:
         return train_planning_agent(env, cfg)
     else:
         # TODO: add your agent options here
@@ -120,12 +122,13 @@ def train(cfg: DictConfig) -> float:
 
 def train_planning_agent(env: gym.Env, cfg: DictConfig) -> float:
     """Train and evaluate dynamic-programming agents with exact models."""
-    agent_classes = {
-        "PolicyIteration": PolicyIteration,
-        "ValueIteration": ValueIteration,
+    agent_name_class_map = {
+        "value_iteration": ValueIteration,
+        "policy_iteration": PolicyIteration,
     }
     model_path = os.path.abspath("model.npy")
-    agent_class = agent_classes[cfg.agent_class]
+    # prior if selecting by agent_name, so we use the name here as well
+    agent_class = agent_name_class_map[cfg.agent_name]
     agent = agent_class(
         env=env,
         seed=cfg.seed,
