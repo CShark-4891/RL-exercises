@@ -156,12 +156,11 @@ class TDAgent(AbstractAgent):
         # update the new Q value in the Q table of this class.
         # Return the new Q value --currently always returns 0.0
 
-        Q_updated = self.Q[state][action] + self.alpha * (
+        self.Q[state][action] = self.Q[state][action] + self.alpha * (
             reward + self.gamma *
             self.Q[next_state][next_action] - self.Q[state][action]
         )
-        self.Q[state][action] = Q_updated
-        return Q_updated
+        return self.Q[state][action]
 
     def Q_Learning(
         self,
@@ -196,4 +195,8 @@ class TDAgent(AbstractAgent):
         # Q learning update rule
         # TODO: Implement the Q-Learning update rule here.
 
-        return 0.0
+        self.Q[state][action] = self.Q[state][action] + self.alpha * (
+            reward + self.gamma *
+            np.max(self.Q[next_state]) - self.Q[state][action]
+        )
+        return self.Q[state][action]
