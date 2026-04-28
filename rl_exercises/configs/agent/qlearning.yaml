@@ -3,3 +3,4 @@ agent: qlearning
 agent_name: qlearning
 batch_size: 0
 training_steps: 15000
+algorithm: "qlearning"
