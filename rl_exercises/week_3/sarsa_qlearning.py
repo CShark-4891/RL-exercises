@@ -34,7 +34,8 @@ class TDAgent(AbstractAgent):
         gamma : float, optional
             Discount Factor , by default 1.0
         algorithm : Literal["sarsa", "qlearning"], optional
-            Whether to use SARSA (on-policy) or Q-Learning (off-policy), by default "sarsa"
+            Whether to use SARSA (on-policy) or Q-Learning (off-policy),
+            by default "sarsa"
         """
         # Check hyperparameter boundaries
         assert 0 <= gamma <= 1, "Gamma should be in [0, 1]"
@@ -92,7 +93,8 @@ class TDAgent(AbstractAgent):
         )
 
     def update_agent(self, batch) -> float:  # type: ignore
-        """Unpack a batch from SimpleBuffer and route to the appropriate TD update.
+        """Unpack a batch from SimpleBuffer and route to the appropriate TD
+        update.
 
         Parameters
         ----------
@@ -105,9 +107,10 @@ class TDAgent(AbstractAgent):
             New Q value for the state action pair
         """
         state, action, reward, next_state, done, _ = batch[0]
-        
+
         if self.algorithm == "sarsa":
-            # TODO: Get the next action for the lookahead in SARSA using the policy of this agent.
+            # TODO: Get the next action for the lookahead in SARSA using the
+            # policy of this agent.
             next_action = 0
             return self.SARSA(state, action, reward, next_state, next_action,
                               done)
@@ -154,7 +157,8 @@ class TDAgent(AbstractAgent):
         # Return the new Q value --currently always returns 0.0
 
         Q_updated = self.Q[state][action] + self.alpha * (
-            reward + self.gamma * self.Q[next_state][next_action] - self.Q[state][action]
+            reward + self.gamma *
+            self.Q[next_state][next_action] - self.Q[state][action]
         )
         self.Q[state][action] = Q_updated
         return Q_updated
