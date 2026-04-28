@@ -13,7 +13,7 @@ import hydra
 import numpy as np
 import pandas as pd
 
-from rl_exercises.week_3.sarsa_qlearning import TDAgent
+
 
 if __package__ is None or __package__ == "":
     sys.path.append(str(Path(__file__).resolve().parents[1]))
@@ -29,6 +29,9 @@ from rl_exercises.agent import AbstractAgent, RandomAgent
 from rl_exercises.agent.buffer import SimpleBuffer
 from rl_exercises.environments import ContextualMarsRover, MarsRover
 from rl_exercises.week_2 import PolicyIteration, ValueIteration
+
+from rl_exercises.week_3.sarsa_qlearning import TDAgent
+from rl_exercises.week_3.epsilon_greedy_policy import EpsilonGreedyPolicy
 
 # from rl_exercises.week_4 import EpsilonGreedyPolicy as TabularEpsilonGreedyPolicy
 # from rl_exercises.week_4 import SARSAAgent
@@ -66,8 +69,10 @@ def train(cfg: DictConfig) -> float:
         return train_sb3(env, cfg)
     elif cfg.agent_name == "random":
         agent = RandomAgent(env)
-    elif cfg.agent_name in {"policy_iteration", "value_iteration", "sarsa", "qlearning"}:
+    elif cfg.agent_name in {"policy_iteration", "value_iteration"}:
         return train_planning_agent(env, cfg)
+    elif cfg.agent_name in {"sarsa", "qlearning"}:
+        return train_TDAgent(env, cfg)
     else:
         # TODO: add your agent options here
         raise NotImplementedError
@@ -137,6 +142,34 @@ def train_planning_agent(env: gym.Env, cfg: DictConfig) -> float:
     )
     agent.update_agent()
     agent.save()
+
+    eval_env = make_env(cfg.env_name, cfg.env_kwargs)
+    final_eval = evaluate(eval_env, agent, cfg.n_eval_episodes, cfg.seed)
+    print(f"Final eval reward was: {final_eval}")
+    return final_eval
+
+
+def train_TDAgent(env: gym.Env, cfg: DictConfig) -> float:
+    """Train and evaluate TD agents."""
+
+    # same agent, different "algorithm" parameter (see sarsa.yaml and qlearning.yaml)
+
+    model_path = os.path.abspath("model.npy")
+
+    agent: TDAgent = TDAgent(
+        env=env,
+        policy=EpsilonGreedyPolicy(env=env, 
+                                   epsilon=0.5, # TODO: define in config 
+                                   seed=0 # TODO: define in config
+                                   ),
+        **cfg.agent_kwargs,
+    )
+    
+    # it is yet unknown where to get the correct batch from.
+    # List of (state, action, reward, next_state, done, info) tuples
+    batch: list[tuple] = [[0,0,0,0,False,{}]] # TODO: get the correct batch from the buffer
+    agent.update_agent(batch=batch)
+    agent.save(path=model_path)
 
     eval_env = make_env(cfg.env_name, cfg.env_kwargs)
     final_eval = evaluate(eval_env, agent, cfg.n_eval_episodes, cfg.seed)

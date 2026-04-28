@@ -3,3 +3,4 @@ agent: sarsa
 agent_name: sarsa
 batch_size: 0
 training_steps: 15000
+algorithm: "sarsa"
