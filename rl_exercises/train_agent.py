@@ -14,7 +14,6 @@ import numpy as np
 import pandas as pd
 
 
-
 if __package__ is None or __package__ == "":
     sys.path.append(str(Path(__file__).resolve().parents[1]))
 
@@ -74,7 +73,7 @@ def train(cfg: DictConfig) -> float:
     elif cfg.agent_name in {"sarsa", "qlearning"}:
         return train_TDAgent(env, cfg)
     else:
-        # TODO: add your agent options here
+        # : add your agent options here
         raise NotImplementedError
 
     buffer_cls = eval(cfg.buffer_cls)
@@ -87,7 +86,8 @@ def train(cfg: DictConfig) -> float:
         action, info = agent.predict_action(state, info)
         next_state, reward, terminated, truncated, info = env.step(action)
 
-        buffer.add(state, action, reward, next_state, (truncated or terminated), info)
+        buffer.add(state, action, reward, next_state,
+                   (truncated or terminated), info)
         train_reward_buffer["steps"].append(step)
         train_reward_buffer["train_rewards"].append(reward)
 
@@ -158,16 +158,19 @@ def train_TDAgent(env: gym.Env, cfg: DictConfig) -> float:
 
     agent: TDAgent = TDAgent(
         env=env,
-        policy=EpsilonGreedyPolicy(env=env, 
-                                   epsilon=0.5, # TODO: define in config 
-                                   seed=0 # TODO: define in config
+        policy=EpsilonGreedyPolicy(env=env,
+                                   epsilon=0.5,  # TODO: define in config
+                                   seed=0  # TODO: define in config
                                    ),
         **cfg.agent_kwargs,
     )
-    
+
+    batches = env
+
     # it is yet unknown where to get the correct batch from.
     # List of (state, action, reward, next_state, done, info) tuples
-    batch: list[tuple] = [[0,0,0,0,False,{}]] # TODO: get the correct batch from the buffer
+    # TODO: get the correct batch from the buffer
+    batch: list[tuple] = [[0, 0, 0, 0, False, {}]]
     agent.update_agent(batch=batch)
     agent.save(path=model_path)
 
@@ -242,7 +245,8 @@ def evaluate(
         done = False
         episode_steps = 0
         while not done:
-            action, _ = agent.predict_action(obs, info, evaluate=True)  # type: ignore[arg-type]
+            action, _ = agent.predict_action(
+                obs, info, evaluate=True)  # type: ignore[arg-type]
             obs, reward, terminated, truncated, _ = env.step(action)
             episode_rewards[-1] += reward
             episode_steps += 1
