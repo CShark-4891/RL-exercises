@@ -1,20 +1,20 @@
 from __future__ import annotations
 
 import pathlib
+import sys
+from pathlib import Path
 
-from matplotlib.offsetbox import AnnotationBbox, OffsetImage
 import matplotlib.pyplot as plt  # type: ignore[import]
 import numpy as np
+from matplotlib.offsetbox import AnnotationBbox, OffsetImage
 from rich import print as printr
-from pathlib import Path
-import sys
+from rl_exercises.environments import MarsRover
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 if __package__ is None or __package__ == "":
     sys.path.append(str(PROJECT_ROOT))
 
-from rl_exercises.environments import MarsRover
 
 script_dir = pathlib.Path(__file__).parent.resolve()
 

@@ -13,7 +13,6 @@ import hydra
 import numpy as np
 import pandas as pd
 
-
 if __package__ is None or __package__ == "":
     sys.path.append(str(Path(__file__).resolve().parents[1]))
 
@@ -28,9 +27,8 @@ from rl_exercises.agent import AbstractAgent, RandomAgent
 from rl_exercises.agent.buffer import SimpleBuffer
 from rl_exercises.environments import ContextualMarsRover, MarsRover
 from rl_exercises.week_2 import PolicyIteration, ValueIteration
-
-from rl_exercises.week_3.sarsa_qlearning import TDAgent
 from rl_exercises.week_3.epsilon_greedy_policy import EpsilonGreedyPolicy
+from rl_exercises.week_3.sarsa_qlearning import TDAgent
 
 # from rl_exercises.week_4 import EpsilonGreedyPolicy as TabularEpsilonGreedyPolicy
 # from rl_exercises.week_4 import SARSAAgent
@@ -63,6 +61,8 @@ def train(cfg: DictConfig) -> float:
         _description_
     """
     env = make_env(cfg.env_name, cfg.env_kwargs)
+
+    print(OmegaConf.to_yaml(cfg))
     printr(cfg)
     if cfg.agent_name == "sb3":
         return train_sb3(env, cfg)
@@ -71,7 +71,13 @@ def train(cfg: DictConfig) -> float:
     elif cfg.agent_name in {"policy_iteration", "value_iteration"}:
         return train_planning_agent(env, cfg)
     elif cfg.agent_name in {"sarsa", "qlearning"}:
-        return train_TDAgent(env, cfg)
+        agent: TDAgent = TDAgent(
+            env=env,
+            policy=EpsilonGreedyPolicy(
+                env=env, epsilon=cfg.policy.epsilon, seed=cfg.policy.seed
+            ),
+            **cfg.agent_kwargs,
+        )
     else:
         # : add your agent options here
         raise NotImplementedError
@@ -86,8 +92,7 @@ def train(cfg: DictConfig) -> float:
         action, info = agent.predict_action(state, info)
         next_state, reward, terminated, truncated, info = env.step(action)
 
-        buffer.add(state, action, reward, next_state,
-                   (truncated or terminated), info)
+        buffer.add(state, action, reward, next_state, (truncated or terminated), info)
         train_reward_buffer["steps"].append(step)
         train_reward_buffer["train_rewards"].append(reward)
 
@@ -142,37 +147,6 @@ def train_planning_agent(env: gym.Env, cfg: DictConfig) -> float:
     )
     agent.update_agent()
     agent.save()
-
-    eval_env = make_env(cfg.env_name, cfg.env_kwargs)
-    final_eval = evaluate(eval_env, agent, cfg.n_eval_episodes, cfg.seed)
-    print(f"Final eval reward was: {final_eval}")
-    return final_eval
-
-
-def train_TDAgent(env: gym.Env, cfg: DictConfig) -> float:
-    """Train and evaluate TD agents."""
-
-    # same agent, different "algorithm" parameter (see sarsa.yaml and qlearning.yaml)
-
-    model_path = os.path.abspath("model.npy")
-
-    agent: TDAgent = TDAgent(
-        env=env,
-        policy=EpsilonGreedyPolicy(env=env,
-                                   epsilon=0.5,  # TODO: define in config
-                                   seed=0  # TODO: define in config
-                                   ),
-        **cfg.agent_kwargs,
-    )
-
-    batches = env
-
-    # it is yet unknown where to get the correct batch from.
-    # List of (state, action, reward, next_state, done, info) tuples
-    # TODO: get the correct batch from the buffer
-    batch: list[tuple] = [[0, 0, 0, 0, False, {}]]
-    agent.update_agent(batch=batch)
-    agent.save(path=model_path)
 
     eval_env = make_env(cfg.env_name, cfg.env_kwargs)
     final_eval = evaluate(eval_env, agent, cfg.n_eval_episodes, cfg.seed)
@@ -245,8 +219,7 @@ def evaluate(
         done = False
         episode_steps = 0
         while not done:
-            action, _ = agent.predict_action(
-                obs, info, evaluate=True)  # type: ignore[arg-type]
+            action, _ = agent.predict_action(obs, info, evaluate=True)  # type: ignore[arg-type]
             obs, reward, terminated, truncated, _ = env.step(action)
             episode_rewards[-1] += reward
             episode_steps += 1

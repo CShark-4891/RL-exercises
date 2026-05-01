@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Tuple
 
-from pathlib import Path
 import sys
 import warnings
+from pathlib import Path
 
 import gymnasium
 import numpy as np
