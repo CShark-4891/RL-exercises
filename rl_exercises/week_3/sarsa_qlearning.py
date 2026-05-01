@@ -115,11 +115,6 @@ class TDAgent(AbstractAgent):
             return self.SARSA(state, action, reward, next_state, next_action, done)
         elif self.algorithm == "qlearning":
             return self.Q_Learning(state, action, reward, next_state, done)
-        elif self.algorithm == "td_lambda":
-            # TODO: TD(lambda) call signature is currently inconsistent.
-            # TODO: TD_lambda expects next_action, but this branch does not
-            # TODO: compute/pass one yet.
-            return self.TD_lambda(state, action, reward, next_state, done)
         else:
             raise ValueError(f"Unknown algorithm: {self.algorithm}")
 
@@ -157,7 +152,6 @@ class TDAgent(AbstractAgent):
         """
 
         # SARSA update rule
-        # : Implement the SARSA update rule here.
         # Use a value of 0. for terminal states and
         # update the new Q value in the Q table of this class.
         # Return the new Q value --currently always returns 0.0
@@ -205,7 +199,6 @@ class TDAgent(AbstractAgent):
         """
 
         # Q learning update rule
-        # : Implement the Q-Learning update rule here.
         if done:
             self.Q[state][action] = self.Q[state][action] + self.alpha * (
                 reward - self.Q[state][action]
