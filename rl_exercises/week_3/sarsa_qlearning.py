@@ -116,6 +116,9 @@ class TDAgent(AbstractAgent):
         elif self.algorithm == "qlearning":
             return self.Q_Learning(state, action, reward, next_state, done)
         elif self.algorithm == "td_lambda":
+            # TODO: TD(lambda) call signature is currently inconsistent.
+            # TODO: TD_lambda expects next_action, but this branch does not
+            # TODO: compute/pass one yet.
             return self.TD_lambda(state, action, reward, next_state, done)
         else:
             raise ValueError(f"Unknown algorithm: {self.algorithm}")
@@ -159,11 +162,16 @@ class TDAgent(AbstractAgent):
         # update the new Q value in the Q table of this class.
         # Return the new Q value --currently always returns 0.0
 
-        self.Q[state][action] = self.Q[state][action] + self.alpha * (
-            reward
-            + self.gamma * self.Q[next_state][next_action]
-            - self.Q[state][action]
-        )
+        if done:
+            self.Q[state][action] = self.Q[state][action] + self.alpha * (
+                reward - self.Q[state][action]
+            )
+        else:
+            self.Q[state][action] = self.Q[state][action] + self.alpha * (
+                reward
+                + self.gamma * self.Q[next_state][next_action]
+                - self.Q[state][action]
+            )
         return self.Q[state][action]
 
     def Q_Learning(
@@ -198,10 +206,14 @@ class TDAgent(AbstractAgent):
 
         # Q learning update rule
         # : Implement the Q-Learning update rule here.
-
-        self.Q[state][action] = self.Q[state][action] + self.alpha * (
-            reward + self.gamma * np.max(self.Q[next_state]) - self.Q[state][action]
-        )
+        if done:
+            self.Q[state][action] = self.Q[state][action] + self.alpha * (
+                reward - self.Q[state][action]
+            )
+        else:
+            self.Q[state][action] = self.Q[state][action] + self.alpha * (
+                reward + self.gamma * np.max(self.Q[next_state]) - self.Q[state][action]
+            )
         return self.Q[state][action]
 
     def TD_lambda(
