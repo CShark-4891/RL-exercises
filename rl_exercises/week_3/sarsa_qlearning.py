@@ -40,10 +40,9 @@ class TDAgent(AbstractAgent):
         # Check hyperparameter boundaries
         assert 0 <= gamma <= 1, "Gamma should be in [0, 1]"
         assert alpha > 0, "Learning rate has to be greater than 0"
-        assert algorithm in [
-            "sarsa",
-            "qlearning",
-        ], "algorithm must be 'sarsa' or 'qlearning'"
+        assert algorithm in ["sarsa", "qlearning"], (
+            "algorithm must be 'sarsa' or 'qlearning'"
+        )
 
         self.env = env
         self.gamma = gamma
@@ -115,11 +114,6 @@ class TDAgent(AbstractAgent):
             return self.SARSA(state, action, reward, next_state, next_action, done)
         elif self.algorithm == "qlearning":
             return self.Q_Learning(state, action, reward, next_state, done)
-        elif self.algorithm == "td_lambda":
-            # TODO: TD(lambda) call signature is currently inconsistent.
-            # TODO: TD_lambda expects next_action, but this branch does not
-            # TODO: compute/pass one yet.
-            return self.TD_lambda(state, action, reward, next_state, done)
         else:
             raise ValueError(f"Unknown algorithm: {self.algorithm}")
 
@@ -215,40 +209,3 @@ class TDAgent(AbstractAgent):
                 reward + self.gamma * np.max(self.Q[next_state]) - self.Q[state][action]
             )
         return self.Q[state][action]
-
-    def TD_lambda(
-        self,
-        state: State,
-        action: int,
-        reward: float,
-        next_state: State,
-        next_action: int,
-        done: bool,
-    ) -> float:
-        """Perform a TD lambda update
-        Q[s,a] ← Q[s,a] + alpha*[r + gamma*Q(s',a') - Q(s,a)]
-
-        Parameters
-        ----------
-        state : State
-            Current state
-        action : int
-            Action taken
-        reward : float
-            Reward received
-        next_state : State
-            Next state
-        next_action : int
-            Next action for lookahead
-        done : bool
-            Whether the episode is finished
-
-        Returns
-        -------
-        float
-            New Q value for the state action pair
-        """
-
-        # TODO: Implement the TD lambda update rule here.
-
-        return 0.0

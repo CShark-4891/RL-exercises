@@ -62,7 +62,6 @@ def train(cfg: DictConfig) -> float:
     """
     env = make_env(cfg.env_name, cfg.env_kwargs)
 
-    print(OmegaConf.to_yaml(cfg))
     printr(cfg)
     if cfg.agent_name == "sb3":
         return train_sb3(env, cfg)
@@ -71,9 +70,6 @@ def train(cfg: DictConfig) -> float:
     elif cfg.agent_name in {"policy_iteration", "value_iteration"}:
         return train_planning_agent(env, cfg)
     elif cfg.agent_name in {"sarsa", "qlearning"}:
-        # TODO: cfg.algorithm is defined in agent configs but not forwarded here.
-        # TODO: pass algorithm=cfg.algorithm (or move it into cfg.agent_kwargs)
-        # TODO: so agent=qlearning does not silently run with TDAgent default "sarsa".
         agent: TDAgent = TDAgent(
             env=env,
             policy=EpsilonGreedyPolicy(
@@ -81,6 +77,8 @@ def train(cfg: DictConfig) -> float:
             ),
             **cfg.agent_kwargs,
         )
+    elif cfg.agent_name == "td_lambda":
+        raise NotImplementedError("TD(lambda) agent is not implemented yet.")
     else:
         # : add your agent options here
         raise NotImplementedError
