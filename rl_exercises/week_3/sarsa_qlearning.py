@@ -155,7 +155,7 @@ class TDAgent(AbstractAgent):
         """
 
         # SARSA update rule
-        # TODO: Implement the SARSA update rule here.
+        # : Implement the SARSA update rule here.
         # Use a value of 0. for terminal states and
         # update the new Q value in the Q table of this class.
         # Return the new Q value --currently always returns 0.0
@@ -197,7 +197,7 @@ class TDAgent(AbstractAgent):
         """
 
         # Q learning update rule
-        # TODO: Implement the Q-Learning update rule here.
+        # : Implement the Q-Learning update rule here.
 
         self.Q[state][action] = self.Q[state][action] + self.alpha * (
             reward + self.gamma *
