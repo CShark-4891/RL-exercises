@@ -1,0 +1,14 @@
+# @package _global_
+agent: td_lambda
+agent_name: td_lambda
+env_name: BoundedRandomWalk
+batch_size: 0
+training_steps: 5000
+eval_every_n_steps: 1000
+agent_kwargs:
+  alpha: 0.1
+  gamma: 1.0
+  lam: 0.3
+  initial_value: 0.5
+env_kwargs:
+  seed: ${seed}

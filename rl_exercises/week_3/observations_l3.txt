@@ -1,0 +1,59 @@
+TD(lambda) observations for Week 3 Level 3
+================================================
+
+What we did
+-----------
+We recreated Sutton's bounded random-walk example from the TD(lambda) paper.
+The walk has states A-G, starts in D, and moves left or right with probability
+0.5.  We predict if the walk ends on the right side.  The true values for B-F
+are 1/6, 2/6, 3/6, 4/6, and 5/6.
+
+We implemented TD(lambda) as a prediction agent.  It learns V(s), not Q(s,a),
+because the paper is about predicting outcomes and not about choosing actions.
+We used one dummy action only because the repo training loop expects an action.
+
+Setup
+-----
+Seed: 0
+Training sets: 100
+Sequences per training set: 10
+Lambda values: 0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0
+
+Repeated presentations
+----------------------
+- lambda=0.0: RMS=0.1297
+- lambda=0.1: RMS=0.1300
+- lambda=0.3: RMS=0.1311
+- lambda=0.5: RMS=0.1327
+- lambda=0.7: RMS=0.1352
+- lambda=0.9: RMS=0.1454
+- lambda=1.0: RMS=0.1728
+
+Best result here: lambda=0.0,
+RMS=0.1297.
+
+This matches the paper: when we show the same data many times, TD(0) works
+best and lambda=1.0 works worst.
+
+Single presentation
+-------------------
+- lambda=0.0: best alpha=0.20, RMS=0.0922
+- lambda=0.1: best alpha=0.20, RMS=0.0904
+- lambda=0.3: best alpha=0.20, RMS=0.0908
+- lambda=0.5: best alpha=0.15, RMS=0.0968
+- lambda=0.7: best alpha=0.15, RMS=0.1087
+- lambda=0.9: best alpha=0.10, RMS=0.1394
+- lambda=1.0: best alpha=0.05, RMS=0.1764
+
+Best result here: lambda=0.1,
+alpha=0.20, RMS=0.0904.
+
+This also matches the paper: with only one pass, a small or middle lambda works
+best, and lambda=1.0 is worst.
+
+Short explanation
+-----------------
+Lambda says how much older states are updated by the current TD error.  With
+lambda=0, mainly the current state is updated.  With lambda=1, many old states
+are updated, but this can overfit the final outcome of one random walk.  Values
+between 0 and 1 are often a good compromise.
