@@ -142,7 +142,9 @@ class TDLambdaPredictionAgent(AbstractAgent):
         """Forget eligibility from the previous episode."""
         self.eligibility.fill(0.0)
 
-    def rms_error(self, true_values: np.ndarray, states: np.ndarray | None = None) -> float:
+    def rms_error(
+        self, true_values: np.ndarray, states: np.ndarray | None = None
+    ) -> float:
         """Compute RMS prediction error on the nonterminal states."""
         true_values = np.asarray(true_values, dtype=float)
         if states is None and hasattr(self.env, "nonterminal_states"):

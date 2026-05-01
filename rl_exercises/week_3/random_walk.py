@@ -148,7 +148,6 @@ class BoundedRandomWalkEnv(gym.Env):
         """Small diagnostics that make trajectories easier to inspect."""
         return {
             "state_label": self.state_label(self.state),
-            "is_terminal": self.state
-            in {self.left_terminal, self.right_terminal},
+            "is_terminal": self.state in {self.left_terminal, self.right_terminal},
             "right_terminal_probability": float(self.true_values[self.state]),
         }

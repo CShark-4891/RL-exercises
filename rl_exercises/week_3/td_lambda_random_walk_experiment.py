@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from pathlib import Path
 import argparse
 import csv
+from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
-
 from rl_exercises.week_3.random_walk import BoundedRandomWalkEnv
-
 
 LAMBDAS = (0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0)
 ALPHAS = tuple(np.round(np.arange(0.0, 0.65, 0.05), 2))
@@ -110,7 +108,9 @@ def rms_error(values: np.ndarray) -> float:
     """RMS error against the true B-F probabilities 1/6, ..., 5/6."""
     true_values = np.linspace(0.0, 1.0, len(values))
     nonterminal = np.arange(1, len(values) - 1, dtype=int)
-    return float(np.sqrt(np.mean((values[nonterminal] - true_values[nonterminal]) ** 2)))
+    return float(
+        np.sqrt(np.mean((values[nonterminal] - true_values[nonterminal]) ** 2))
+    )
 
 
 def train_repeated_presentations(
@@ -267,14 +267,14 @@ Setup
 Seed: {seed}
 Training sets: {n_training_sets}
 Sequences per training set: {sequences_per_set}
-Lambda values: {', '.join(str(value) for value in LAMBDAS)}
+Lambda values: {", ".join(str(value) for value in LAMBDAS)}
 
 Repeated presentations
 ----------------------
 {repeated_table}
 
-Best result here: lambda={best_repeated['lambda']:.1f},
-RMS={best_repeated['mean_rms']:.4f}.
+Best result here: lambda={best_repeated["lambda"]:.1f},
+RMS={best_repeated["mean_rms"]:.4f}.
 
 This matches the paper: when we show the same data many times, TD(0) works
 best and lambda=1.0 works worst.
@@ -283,8 +283,8 @@ Single presentation
 -------------------
 {best_table}
 
-Best result here: lambda={best_single['lambda']:.1f},
-alpha={best_single['alpha']:.2f}, RMS={best_single['mean_rms']:.4f}.
+Best result here: lambda={best_single["lambda"]:.1f},
+alpha={best_single["alpha"]:.2f}, RMS={best_single["mean_rms"]:.4f}.
 
 This also matches the paper: with only one pass, a small or middle lambda works
 best, and lambda=1.0 is worst.
