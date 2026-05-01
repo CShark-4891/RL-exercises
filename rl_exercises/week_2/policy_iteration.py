@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from pathlib import Path
 import sys
 import warnings
+from pathlib import Path
 
 import numpy as np
 from rich import print as printr

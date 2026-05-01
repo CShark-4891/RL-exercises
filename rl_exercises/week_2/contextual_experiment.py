@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import pandas as pd
 from rich import print as printr
@@ -11,7 +11,6 @@ if __package__ is None or __package__ == "":
 
 from rl_exercises.environments import ContextualMarsRover
 from rl_exercises.week_2 import PolicyIteration, ValueIteration
-
 
 TRAIN_CONTEXTS = [0, 1]
 VALIDATION_CONTEXTS = [2]
