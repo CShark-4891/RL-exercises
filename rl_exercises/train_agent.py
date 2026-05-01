@@ -71,6 +71,9 @@ def train(cfg: DictConfig) -> float:
     elif cfg.agent_name in {"policy_iteration", "value_iteration"}:
         return train_planning_agent(env, cfg)
     elif cfg.agent_name in {"sarsa", "qlearning"}:
+        # TODO: cfg.algorithm is defined in agent configs but not forwarded here.
+        # TODO: pass algorithm=cfg.algorithm (or move it into cfg.agent_kwargs)
+        # TODO: so agent=qlearning does not silently run with TDAgent default "sarsa".
         agent: TDAgent = TDAgent(
             env=env,
             policy=EpsilonGreedyPolicy(

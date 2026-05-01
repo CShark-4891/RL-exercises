@@ -1,0 +1,20 @@
+Week 3 – Level 2 Observations (SARSA vs Q-learning)
+
+Both SARSA and Q-learning were tested on the MarsRover environment using identical settings. 
+Initially, both agents achieved the same final performance (return = 90.0), which indicated a configuration issue. 
+After explicitly selecting the algorithm, a clear difference emerged: 
+SARSA maintained a return of 90.0, while Q-learning dropped to 50.0.
+
+Analyzing the learned Q-values and greedy policies showed that both agents preferred moving right in most states. 
+However, in the final state (s4), SARSA continued choosing the right action and remained in the high-reward region, 
+resulting in a stable trajectory and consistently high returns. 
+In contrast, Q-learning learned to prefer the left action in s4, causing the agent to oscillate between states 3 and 4, 
+which led to lower overall returns.
+
+This difference can be explained by the learning strategies: SARSA, being on-policy, 
+updates its values based on the actions it actually takes, leading to more stable and conservative behavior. 
+Q-learning, as an off-policy method, updates using the maximum possible future reward, which can lead to overestimation. 
+In this case, it overvalued a suboptimal action, resulting in unstable behavior and a worse policy.
+
+In conclusion, while both methods can learn effective policies, SARSA proved more stable in this environment, 
+whereas Q-learning exhibited over-optimistic estimates that led to suboptimal behavior. 
