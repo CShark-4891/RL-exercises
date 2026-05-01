@@ -27,8 +27,9 @@ from rl_exercises.agent import AbstractAgent, RandomAgent
 from rl_exercises.agent.buffer import SimpleBuffer
 from rl_exercises.environments import ContextualMarsRover, MarsRover
 from rl_exercises.week_2 import PolicyIteration, ValueIteration
-from rl_exercises.week_3.epsilon_greedy_policy import EpsilonGreedyPolicy
-from rl_exercises.week_3.sarsa_qlearning import TDAgent
+from rl_exercises.week_3 import EpsilonGreedyPolicy, TDAgent
+from rl_exercises.week_3.random_walk import BoundedRandomWalkEnv
+from rl_exercises.week_3.td_lambda import TDLambdaPredictionAgent
 
 # from rl_exercises.week_4 import EpsilonGreedyPolicy as TabularEpsilonGreedyPolicy
 # from rl_exercises.week_4 import SARSAAgent
@@ -75,10 +76,13 @@ def train(cfg: DictConfig) -> float:
             policy=EpsilonGreedyPolicy(
                 env=env, epsilon=cfg.policy.epsilon, seed=cfg.policy.seed
             ),
+            algorithm=cfg.algorithm,
             **cfg.agent_kwargs,
         )
     elif cfg.agent_name == "td_lambda":
-        raise NotImplementedError("TD(lambda) agent is not implemented yet.")
+        # TD(lambda) in Sutton (1988) is a prediction algorithm.  It estimates
+        # V(s), so it does not need an exploration policy like SARSA/Q-learning.
+        agent = TDLambdaPredictionAgent(env=env, **cfg.agent_kwargs)
     else:
         # : add your agent options here
         raise NotImplementedError
@@ -259,6 +263,8 @@ def make_env(env_name: str, env_kwargs: dict | None = None) -> gym.Env:
         # env = TimeLimit(env, max_episode_steps=env.horizon)
     elif env_name == "ContextualMarsRover":
         env = ContextualMarsRover(**env_kwargs)
+    elif env_name == "BoundedRandomWalk":
+        env = BoundedRandomWalkEnv(**env_kwargs)
     elif "MiniGrid" in env_name:
         env = gym.make(env_name, **env_kwargs)
         # env = RGBImgObsWrapper(env)
