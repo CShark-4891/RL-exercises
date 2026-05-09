@@ -1,0 +1,79 @@
+Week 4 - Level 2 observations
+=============================
+
+Setup
+-----
+We trained the base DQN on CartPole-v1 for 20000 frames.
+For Level 2 we used five seeds: 0, 1, 2, 3, and 4.
+We kept the DQN hyperparameters fixed for all seeds.
+
+The base DQN setup was:
+- hidden_dim=64
+- hidden_layers=2
+- buffer_capacity=10000
+- batch_size=32
+- learning_rate=0.001
+- gamma=0.99
+- epsilon_start=1.0
+- epsilon_final=0.01
+- epsilon_decay=500
+- target_update_freq=1000
+
+Why we used this setup
+----------------------
+In Level 2 we did not compare different hyperparameters.
+We wanted to test how much the same DQN setup changes when only the random seed
+changes.
+
+Each seed changes random network initialization, exploration, and sampled replay
+batches.  This is important in Deep RL because one lucky or unlucky seed can
+make an algorithm look much better or worse than it really is.
+
+Observed results
+----------------
+The final rewards were quite different across seeds:
+- seed 0: final=294.0, best=306.2 at 10000 frames
+- seed 1: final=133.9, best=228.5 at 16000 frames
+- seed 2: final=138.8, best=192.2 at 15000 frames
+- seed 3: final=205.9, best=314.4 at 9000 frames
+- seed 4: final=243.4, best=243.4 at 20000 frames
+
+The final mean reward across seeds was 203.2.
+The final median reward was 205.9.
+The final IQM was about 196.0.
+The final rewards ranged from 133.9 to 294.0.
+
+The mean training curve reached its best value at 16000 frames with 232.4.
+At the end, at 20000 frames, the mean was lower with 203.2.
+This shows that the agent did not improve monotonically for every seed.
+
+RLiable interpretation
+----------------------
+Plain averages are useful, but they hide how different the seeds are.
+For example, seed 0 looked much better than seed 1 and seed 2 at the end.
+If we only reported seed 0, DQN would look much stronger than it looked on
+average.
+
+RLiable makes the result more robust because it reports several statistics:
+- Mean: the normal average over seeds
+- Median: the middle seed result
+- IQM: a trimmed mean that is less affected by extreme seeds
+- Optimality gap: how far the normalized score is from the target score
+
+We feel more confident with the RLiable plot than with one seed only.
+However, five seeds are still not enough to make strong claims about small
+differences.  The result is more reliable than one run, but it is still noisy.
+
+Conclusion
+----------
+Level 2 shows that DQN on CartPole is sensitive to random seeds.
+The same hyperparameters produced final rewards from 133.9 to 294.0.
+Therefore, reporting only one run would be misleading.
+
+Using RLiable gives a better summary because it shows robust metrics and
+uncertainty across seeds.  We would trust these results more than a single
+training curve.
+
+To reproduce the plots:
+
+.venv/bin/python -m rl_exercises.week_4.experiments --mode l2

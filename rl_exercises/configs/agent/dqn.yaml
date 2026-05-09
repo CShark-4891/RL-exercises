@@ -13,6 +13,14 @@ agent:
   epsilon_final:      0.01
   epsilon_decay:      500
   target_update_freq: 1000
+  hidden_dim:          64
+  hidden_layers:       2
+  double_dqn:          false
+  prioritized_replay:  false
+  per_alpha:           0.6
+  per_beta_start:      0.4
+  per_beta_frames:     10000
+  per_epsilon:         0.000001
 
 train:
   num_frames:     20000   # total env steps

@@ -1,0 +1,65 @@
+Week 4 - Level 1 observations
+=============================
+
+Setup
+-----
+We trained DQN on CartPole-v1 for 20000 frames.
+For Level 1 we used one seed, seed 0, for each configuration.
+We saved one CSV file per configuration and one plot with all training curves.
+
+We compared these configurations:
+- base: hidden_dim=64, hidden_layers=2, buffer_capacity=10000, batch_size=32
+- wide: hidden_dim=128, hidden_layers=2, buffer_capacity=10000, batch_size=32
+- deep: hidden_dim=64, hidden_layers=3, buffer_capacity=10000, batch_size=32
+- small_buffer: hidden_dim=64, hidden_layers=2, buffer_capacity=2000, batch_size=32
+- large_batch: hidden_dim=64, hidden_layers=2, buffer_capacity=10000, batch_size=64
+
+Why we chose these parameters
+----------------------------
+We used the base setup as the normal DQN baseline from the config.
+It is small enough for CartPole, but still has enough capacity to learn.
+
+We made the wide network only wider, from 64 to 128 hidden units.
+This tests if more neurons help when the depth stays the same.
+
+We made the deep network only deeper, from 2 to 3 hidden layers.
+This tests if more layers help when the width stays the same.
+
+We made the replay buffer smaller, from 10000 to 2000 transitions.
+This tests if less replay memory makes learning less stable.
+
+We made the batch size larger, from 32 to 64 transitions.
+This tests if smoother gradient updates help learning.
+
+Observed results
+----------------
+All configurations started with low rewards around 10 to 20.
+This is expected because the agent mostly explores at the beginning.
+
+The base agent improved clearly.  It first reached a reward above 100 at 6000
+frames and above 200 at 8000 frames.  Its best value was 306.2 at 10000 frames,
+and it finished with 294.0.
+
+The small buffer agent performed best in this run.  It reached a reward above
+100 at 5000 frames and above 200 at 7000 frames.  Its best value was 381.0 at
+14000 frames, and it finished with 302.5.
+
+The deep agent also learned, but it was weaker than base and small_buffer.  It
+finished with 208.1.
+
+The wide agent improved more slowly and finished with 144.7.  In this run, a
+wider network did not help.
+
+The large batch agent reached good rewards in the middle of training, but then
+dropped again.  It finished with 140.6.
+
+Conclusion
+----------
+In our Level 1 run, the default network was already strong enough for CartPole.
+Adding more width or depth did not clearly improve the result.  The small replay
+buffer worked surprisingly well for this seed, but this result should be checked
+with more seeds before making a strong claim.
+
+To reproduce the plot:
+
+.venv/bin/python -m rl_exercises.week_4.experiments --mode l1
