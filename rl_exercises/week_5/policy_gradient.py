@@ -83,10 +83,18 @@ class Policy(nn.Module):
         torch.Tensor
             Softmax probabilities over actions, shape (batch_size, n_actions).
         """
-        # TODO: Apply fc1 followed by ReLU (Flatten input if needed)
-        # TODO: Apply fc2 to get logits
-        # TODO: Return softmax over logits along the last dimension
-        pass
+        # Done: Apply fc1 followed by ReLU (Flatten input if needed)
+        # Done: Apply fc2 to get logits
+        # Done: Return softmax over logits along the last dimension
+
+        if isinstance(x, np.ndarray):
+            x = torch.from_numpy(x).float()
+
+        x = self.fc1(x)
+        x = torch.relu(x)
+        logits = self.fc2(x)
+        probs = torch.softmax(logits, dim=-1)
+        return probs
 
 
 class REINFORCEAgent(AbstractAgent):
@@ -128,7 +136,8 @@ class REINFORCEAgent(AbstractAgent):
         set_seed(env, seed)
         self.env = env
         self.gamma = gamma
-        self.policy = Policy(env.observation_space, env.action_space, hidden_size)
+        self.policy = Policy(env.observation_space,
+                             env.action_space, hidden_size)
         self.optimizer = optim.Adam(self.policy.parameters(), lr=lr)
         self.total_episodes = 0
 
@@ -157,10 +166,27 @@ class REINFORCEAgent(AbstractAgent):
         info_out : dict
             Contains 'log_prob' if in training mode; empty if evaluating.
         """
-        # TODO: Pass state through the policy network to get action probabilities
+        # Done: Pass state through the policy network to get action probabilities
         # If evaluate is True, return the action with highest probability
         # Otherwise, sample from the action distribution and return the log-probability as a key in the dictionary (Hint: use torch.distributions.Categorical)
-        return 0, {}  # Placeholder return value
+
+        if evaluate:
+            # Return the action with highest probability
+            with torch.no_grad():
+                probs = self.policy(state)
+            action = torch.argmax(probs).item()
+            info_out = {}
+        else:
+            # Sample from the action distribution
+            with torch.no_grad():
+                probs = self.policy(state)
+            dist = torch.distributions.Categorical(probs)
+            action = dist.sample().item()
+            log_prob = dist.log_prob(
+                torch.tensor(action, dtype=torch.float)).requires_grad_()
+            info_out = {"log_prob": log_prob}
+
+        return action, info_out
 
     def compute_returns(self, rewards: List[float]) -> torch.Tensor:
         """
@@ -176,12 +202,21 @@ class REINFORCEAgent(AbstractAgent):
         torch.Tensor
             Discounted returns tensor of shape (len(rewards),).
         """
-        # TODO: Initialize running return R = 0
-        # TODO: Iterate over rewards and compute the return-to-go:
+        # Done: Initialize running return R = 0
+        # Done: Iterate over rewards and compute the return-to-go:
         #       - Update R = r + gamma * R
         #       - Insert R at the beginning of the returns list
-        # TODO: Convert the list of returns to a torch.Tensor and return
-        pass
+        # Done: Convert the list of returns to a torch.Tensor and return
+
+        running_return = 0
+
+        return_to_go = []
+
+        for r in reversed(rewards):
+            running_return = r + self.gamma * running_return
+            return_to_go.insert(0, running_return)
+
+        return torch.tensor(return_to_go, dtype=torch.float)
 
     def update_agent(
         self,
@@ -210,9 +245,15 @@ class REINFORCEAgent(AbstractAgent):
         returns_t = self.compute_returns(rewards)
 
         # normalize advantages
-        # TODO: Normalize advantages with mean and standard deviation,
+        # Done: Normalize advantages with mean and standard deviation,
         # and add 1e-8 to the denominator to avoid division by zero
         advantages = returns_t
+
+        ad_mean = advantages.mean()
+        ad_std = advantages.std()
+
+        advantages = (advantages - ad_mean) / \
+            (ad_std + 1e-8)
 
         lp_tensor = torch.stack(log_probs)
         loss = -torch.sum(lp_tensor * advantages)
@@ -274,14 +315,29 @@ class REINFORCEAgent(AbstractAgent):
             Standard deviation of returns.
         """
         self.policy.eval()
+
         returns: List[float] = []
-        # TODO: rollout num_episodes in eval_env and aggregate undiscounted returns across episodes
+        # Done: rollout num_episodes in eval_env and aggregate undiscounted returns across episodes
+
+        for ep in range(num_episodes):
+            state, _ = eval_env.reset()
+            done = False
+            total_return = 0.0
+
+            while not done:
+                action, _ = self.predict_action(state, evaluate=True)
+                next_state, reward, term, trunc, _ = eval_env.step(action)
+                done = term or trunc
+                total_return += reward
+                state = next_state
+
+            returns.append(total_return)
 
         self.policy.train()  # Set back to training mode
 
-        # TODO: Return the mean and std of the returns across episodes
-        mean = np.mean(returns) if returns else 0.0
-        std = np.std(returns) if returns else 0.0
+        # Done: Return the mean and std of the returns across episodes
+        mean = float(np.mean(returns)) if returns else 0.0
+        std = float(np.std(returns)) if returns else 0.0
         return mean, std
 
     def train(
@@ -310,7 +366,8 @@ class REINFORCEAgent(AbstractAgent):
                 action, info = self.predict_action(state)
                 next_state, reward, term, trunc, _ = self.env.step(action)
                 done = term or trunc
-                batch.append((state, action, float(reward), next_state, done, info))
+                batch.append((state, action, float(
+                    reward), next_state, done, info))
                 state = next_state
 
             loss = self.update_agent(batch)
@@ -318,11 +375,14 @@ class REINFORCEAgent(AbstractAgent):
             self.total_episodes += 1
 
             if ep % 10 == 0:
-                print(f"[Train] Ep {ep:3d} Return {total_return:5.1f} Loss {loss:.3f}")
+                print(
+                    f"[Train] Ep {ep:3d} Return {total_return:5.1f} Loss {loss:.3f}")
 
             if ep % eval_interval == 0:
-                mean_ret, std_ret = self.evaluate(eval_env, num_episodes=eval_episodes)
-                print(f"[Eval ] Ep {ep:3d} AvgReturn {mean_ret:5.1f} ± {std_ret:4.1f}")
+                mean_ret, std_ret = self.evaluate(
+                    eval_env, num_episodes=eval_episodes)
+                print(
+                    f"[Eval ] Ep {ep:3d} AvgReturn {mean_ret:5.1f} ± {std_ret:4.1f}")
 
         print("Training complete.")
 
