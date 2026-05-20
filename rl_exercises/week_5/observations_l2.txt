@@ -1,0 +1,80 @@
+Week 5 - Level 2 observations
+=============================
+
+Setup
+-----
+We trained REINFORCE on CartPole-v1 with three different trajectory limits:
+- cartpole_cap50: max 50 steps per episode
+- cartpole_cap200: max 200 steps per episode
+- cartpole_cap500: max 500 steps per episode
+
+For CartPole we used seeds 0, 1, and 2.  Each run trained for 250 episodes and
+was evaluated every 50 episodes with five deterministic evaluation episodes.
+The policy network had one hidden layer with 64 units, learning rate 0.01, and
+gamma 0.99.
+
+We also made a short LunarLander-v3 run with seed 0.  The exercise mentions
+LunarLander-v2, but the installed Gymnasium version marks v2 as deprecated, so
+we used v3.  For LunarLander we used hidden_size=128 and learning rate 0.001.
+
+Trajectory length
+-----------------
+The trajectory length changed what the agent could learn.
+
+With cap 50, the final evaluation returns were:
+- seed 0: 49.4
+- seed 1: 50.0
+- seed 2: 50.0
+
+This looks stable, but it only means the agent solves the shortened task.  It
+cannot score above 50 because the episode is cut off early.
+
+With cap 200, all three seeds reached the maximum score:
+- seed 0: 200.0
+- seed 1: 200.0
+- seed 2: 200.0
+
+This was the cleanest setting in this small run.  The episodes were long enough
+to provide useful returns, but not so long that one unstable policy update could
+damage a long successful trajectory too much.
+
+With cap 500, two seeds reached the maximum, but one seed collapsed:
+- seed 0: 500.0
+- seed 1: 125.2
+- seed 2: 500.0
+
+This shows the noisy nature of REINFORCE.  Long trajectories can give much
+better scores, but the update variance also becomes more visible.
+
+LunarLander
+-----------
+The same basic network and learning setup did not transfer well to
+LunarLander-v3.  After 120 episodes, the final evaluation mean was -340.1.
+
+This is not surprising.  LunarLander has a larger state space, four actions, and
+a more complicated reward signal than CartPole.  REINFORCE uses full-trajectory
+Monte Carlo returns, so the gradient estimates are very noisy.  It likely needs
+more tuning, many more episodes, a baseline or critic, and probably a different
+learning rate.
+
+Comparison with DQN from Week 4
+-------------------------------
+In Week 4, DQN on CartPole usually improved over frame counts and learned from
+replayed transitions.  In the Level 1 base run, it first reached a reward above
+200 at about 8000 frames and finished around 294 after 20000 frames.
+
+REINFORCE can solve CartPole in some seeds, but it uses each trajectory only
+once and does not bootstrap from a learned value function.  In our cap500 run,
+two seeds reached 500 quickly, while one seed dropped back to 125.2.  This makes
+REINFORCE less sample-efficient and less stable than DQN in these small runs.
+
+Conclusion
+----------
+The main lesson is that REINFORCE is very sensitive to trajectory length and
+random seed.  Short trajectories are stable but cap performance.  Longer
+trajectories can solve CartPole, but one bad run can still collapse.  The same
+setup does not work directly for LunarLander.
+
+To reproduce the plot and CSV files:
+
+.venv/bin/python -m rl_exercises.week_5.experiments --mode l2
