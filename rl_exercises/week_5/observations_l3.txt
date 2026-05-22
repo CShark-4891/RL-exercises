@@ -1,0 +1,48 @@
+Week 5 - Level 3 observations
+=============================
+
+Setup
+-----
+We compared DDPG and REINFORCE on Pendulum-v1.  Pendulum has a continuous
+one-dimensional torque action in [-2, 2], so DDPG can act in the native action
+space.  The existing REINFORCE implementation is discrete, so the baseline uses
+a wrapper with 9 evenly spaced torque actions.
+
+The run is intentionally small so it can be reproduced quickly:
+- DDPG: 3000 environment steps, actor_lr=0.0001, critic_lr=0.001, tau=0.005
+- REINFORCE: 60 episodes with the same episode cap and 9 action bins
+
+Paper context
+-------------
+Lillicrap et al. describe DDPG as a deterministic actor-critic method that
+brings the DQN stability tricks into continuous control.  The important
+changes compared with a naive neural DPG implementation are:
+- a replay buffer, which breaks up correlations between consecutive samples and
+  allows off-policy minibatch updates;
+- target actor and target critic networks, which make Bellman targets change
+  slowly;
+- soft target updates, theta_target <- tau theta + (1 - tau) theta_target,
+  instead of hard copies;
+- exploration by adding a noise process to the deterministic actor.  We use
+  Ornstein-Uhlenbeck noise here, as in the paper's physical-control setup.
+
+Comparison
+----------
+Final evaluation mean in this small run:
+- DDPG: -976.9
+- REINFORCE with discretized actions: -1568.4
+
+The comparison is not a claim that the short DDPG run has solved Pendulum.  It
+is mainly a structural comparison.  REINFORCE uses full-episode Monte Carlo
+returns and throws away each trajectory after one update, so the gradient is
+high variance.  DDPG uses replayed transitions and bootstrapped critic targets,
+which is closer to the DQN intuition from Week 4.
+
+The action space also matters.  Discretizing Pendulum lets the old REINFORCE
+agent run, but it removes the continuous structure that DDPG is designed to
+exploit.  This connects directly to the paper's motivation: discretizing
+continuous controls scales badly and can discard useful action geometry.
+
+To reproduce the plot and CSV files:
+
+.venv/bin/python -m rl_exercises.week_5.experiments --mode l3
