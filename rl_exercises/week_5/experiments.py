@@ -509,6 +509,11 @@ changes compared with a naive neural DPG implementation are:
 - exploration by adding a noise process to the deterministic actor.  We use
   Ornstein-Uhlenbeck noise here, as in the paper's physical-control setup.
 
+The paper also uses batch normalization to make learning less sensitive to
+different observation scales across physical-control tasks.  This small
+exercise implementation leaves that part out, but it keeps the main DQN-style
+stability changes: replay and slowly moving target networks.
+
 Comparison
 ----------
 Final evaluation mean in this small run:
