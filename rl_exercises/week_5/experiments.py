@@ -87,8 +87,8 @@ L3_DDPG_CONFIG: dict[str, Any] = {
     "env_name": "Pendulum-v1",
     "max_episode_steps": 200,
     "seeds": [0],
-    "frames": 3000,
-    "eval_every": 1000,
+    "frames": 12000,
+    "eval_every": 3000,
     "eval_episodes": 3,
     "actor_lr": 1e-4,
     "critic_lr": 1e-3,
@@ -494,6 +494,9 @@ a wrapper with 9 evenly spaced torque actions.
 The run is intentionally small so it can be reproduced quickly:
 - DDPG: {L3_DDPG_CONFIG["frames"]} environment steps, actor_lr={L3_DDPG_CONFIG["actor_lr"]}, critic_lr={L3_DDPG_CONFIG["critic_lr"]}, tau={L3_DDPG_CONFIG["tau"]}
 - REINFORCE: {L3_REINFORCE_CONFIG["episodes"]} episodes with the same episode cap and 9 action bins
+
+Because Pendulum-v1 uses 200-step episodes here, both agents are compared over
+12000 environment steps.
 
 Paper context
 -------------

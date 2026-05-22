@@ -9,8 +9,11 @@ space.  The existing REINFORCE implementation is discrete, so the baseline uses
 a wrapper with 9 evenly spaced torque actions.
 
 The run is intentionally small so it can be reproduced quickly:
-- DDPG: 3000 environment steps, actor_lr=0.0001, critic_lr=0.001, tau=0.005
+- DDPG: 12000 environment steps, actor_lr=0.0001, critic_lr=0.001, tau=0.005
 - REINFORCE: 60 episodes with the same episode cap and 9 action bins
+
+Because Pendulum-v1 uses 200-step episodes here, both agents are compared over
+12000 environment steps.
 
 Paper context
 -------------
@@ -34,7 +37,7 @@ stability changes: replay and slowly moving target networks.
 Comparison
 ----------
 Final evaluation mean in this small run:
-- DDPG: -976.9
+- DDPG: -327.3
 - REINFORCE with discretized actions: -1568.4
 
 The comparison is not a claim that the short DDPG run has solved Pendulum.  It
