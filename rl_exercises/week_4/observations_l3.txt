@@ -1,0 +1,100 @@
+Week 4 - Level 3 observations
+=============================
+
+Setup
+-----
+We trained DQN on CartPole-v1 for 20000 frames.
+For Level 3 we used five seeds: 0, 1, 2, 3, and 4.
+We compared four DQN variants:
+- base_dqn
+- prioritized_replay
+- double_dqn
+- prioritized_replay_double_dqn
+
+All variants used the same basic hyperparameters:
+- hidden_dim=64
+- hidden_layers=2
+- buffer_capacity=10000
+- batch_size=32
+- learning_rate=0.001
+- gamma=0.99
+- epsilon_start=1.0
+- epsilon_final=0.01
+- epsilon_decay=500
+- target_update_freq=1000
+
+What the variants change
+------------------------
+The base DQN uses uniform replay and the normal DQN target.
+
+Prioritized replay changes the replay buffer.  Instead of sampling all
+transitions with the same probability, transitions with a larger TD error are
+sampled more often.  The idea is that surprising transitions can be more useful
+for learning.
+
+Double DQN changes the target calculation.  The online network chooses the best
+next action, and the target network evaluates this action.  This reduces the
+overestimation problem of normal DQN.
+
+The combined variant uses both prioritized replay and Double DQN.
+
+Paper idea
+----------
+The Rainbow paper combines several improvements to DQN.  It asks if these
+individual improvements work well together.  The full Rainbow algorithm includes
+more components than we implemented, but in this task we focused on two common
+ones: prioritized replay and Double DQN.
+
+Observed final results
+----------------------
+The final results across five seeds were:
+- base_dqn: mean=203.2, median=205.9, IQM=196.0
+- prioritized_replay: mean=228.7, median=250.0, IQM=232.0
+- double_dqn: mean=215.8, median=225.1, IQM=223.5
+- prioritized_replay_double_dqn: mean=163.1, median=151.8, IQM=166.2
+
+The best mean curve values during training were:
+- base_dqn: 232.4 at 16000 frames
+- prioritized_replay: 276.0 at 9000 frames
+- double_dqn: 238.2 at 15000 frames
+- prioritized_replay_double_dqn: 251.5 at 10000 frames
+
+Interpretation
+--------------
+Prioritized replay performed best in this run.  It had the highest final mean,
+highest final median, and highest final IQM.  It also reached its best mean
+performance earlier than the base DQN.  This suggests that replaying high-error
+transitions helped sample efficiency on CartPole.
+
+Double DQN was also better than base DQN at the final frame.  It had a higher
+mean, median, and IQM than base DQN.  This suggests that reducing overestimation
+helped the agent learn more stable values.
+
+The combined variant was not the best in our run.  It reached a good mean value
+around 10000 frames, but its final mean dropped to 163.1.  This shows that adding
+two improvements does not automatically make the result better in a small
+environment like CartPole.
+
+RLiable interpretation
+----------------------
+The RLiable plot is useful because the results are noisy across seeds.
+For example, one variant can have a high best value in one seed, but still have
+a weaker final average across all seeds.
+
+IQM is helpful here because it is less affected by one very good or very bad
+seed.  In our final results, prioritized replay had the strongest IQM, followed
+by Double DQN, base DQN, and then the combined variant.
+
+Conclusion
+----------
+In our Level 3 ablation, prioritized replay was the strongest variant.
+Double DQN also improved over base DQN.
+The combined variant did not improve the final result in this CartPole run.
+
+This matches the main lesson of the Rainbow paper in a small way: DQN
+improvements can help, but their effect should be tested with ablations and
+multiple seeds instead of assumed.
+
+To reproduce the plots:
+
+.venv/bin/python -m rl_exercises.week_4.experiments --mode l3
