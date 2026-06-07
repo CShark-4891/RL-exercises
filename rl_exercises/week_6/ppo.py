@@ -9,6 +9,7 @@ from typing import Any, List, Tuple
 import gymnasium as gym
 import numpy as np
 import torch
+import torch.nn.functional as F
 import torch.optim as optim
 from torch.distributions import Categorical
 
@@ -53,6 +54,8 @@ class PPOAgent(AbstractAgent):
         batch_size: int = 64,
         ent_coef: float = 0.01,
         vf_coef: float = 0.5,
+        value_clip: bool = True,
+        target_kl: float | None = 0.03,
         seed: int = 0,
         hidden_size: int = 128,
     ) -> None:
@@ -66,6 +69,8 @@ class PPOAgent(AbstractAgent):
         self.batch_size = batch_size
         self.ent_coef = ent_coef
         self.vf_coef = vf_coef
+        self.value_clip = value_clip
+        self.target_kl = target_kl
 
         # networks
         self.policy = Policy(env.observation_space, env.action_space, hidden_size)
@@ -80,12 +85,15 @@ class PPOAgent(AbstractAgent):
         )
 
     def predict(
-        self, state: np.ndarray
+        self, state: np.ndarray, evaluate: bool = False
     ) -> Tuple[int, torch.Tensor, torch.Tensor, torch.Tensor]:
         t = torch.from_numpy(state).float()
         probs = self.policy(t).squeeze(0)
         dist = Categorical(probs)
-        action = dist.sample().item()
+        if evaluate:
+            action = int(torch.argmax(probs).item())
+        else:
+            action = dist.sample().item()
         return (
             action,
             dist.log_prob(torch.tensor(action)),
@@ -97,11 +105,26 @@ class PPOAgent(AbstractAgent):
         self,
         rewards: List[float],
         values: torch.Tensor,
-        next_values: torch.Tensor,  # noqa: F841
+        next_values: torch.Tensor,
         dones: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        # TODO: compute advantages using GAE (Hint: replicate the GAE formula from actor critic)
-        return None  # template placeholder
+        values = values.detach().view(-1)
+        next_values = next_values.detach().view(-1)
+        rewards_t = torch.tensor(rewards, dtype=torch.float32, device=values.device)
+        dones = dones.to(device=values.device, dtype=torch.float32).view(-1)
+
+        deltas = rewards_t + self.gamma * next_values * (1.0 - dones) - values
+        advantages = torch.zeros_like(deltas)
+        gae = 0.0
+        for t in reversed(range(len(rewards))):
+            gae = deltas[t] + self.gamma * self.gae_lambda * (1.0 - dones[t]) * gae
+            advantages[t] = gae
+
+        returns = advantages + values
+        advantages = (advantages - advantages.mean()) / (
+            advantages.std(unbiased=False) + 1e-8
+        )
+        return advantages.detach(), returns.detach()
 
     def update(self, trajectory: List[Any]) -> None:
         # unpack trajectory
@@ -111,41 +134,57 @@ class PPOAgent(AbstractAgent):
         entropies = torch.stack([t[3] for t in trajectory]).detach()  # noqa: F841
         rewards = [t[4] for t in trajectory]
         dones = torch.tensor([t[5] for t in trajectory], dtype=torch.float32)
+        next_states = torch.stack([torch.from_numpy(t[6]).float() for t in trajectory])
 
-        # TODO: compute values and next_values without gradients
-        values = ...  # noqa: F841  # template placeholder
-        next_values = ...  # noqa: F841  # template placeholder
-
-        # TODO: compute advantages and returns
-        advantages = ...  # template placeholder
-        returns = ...  # template placeholder
-
+        with torch.no_grad():
+            values = self.value_fn(states)
+            next_values = self.value_fn(next_states)
         advantages, returns = self.compute_gae(rewards, values, next_values, dones)
 
         dataset = torch.utils.data.TensorDataset(
-            states, actions, old_logps, advantages, returns
+            states, actions, old_logps, advantages, returns, values.detach()
         )
         loader = torch.utils.data.DataLoader(
             dataset, batch_size=self.batch_size, shuffle=True
         )
 
+        policy_loss = torch.tensor(0.0)
+        value_loss = torch.tensor(0.0)
+        entropy_loss = torch.tensor(0.0)
         for _ in range(self.epochs):
-            for b_states, b_actions, b_oldlogp, b_adv, b_ret in loader:
-                # TODO: compute policy loss, value loss, and entropy loss
+            stop_early = False
+            for b_states, b_actions, b_oldlogp, b_adv, b_ret, b_old_values in loader:
+                probs = self.policy(b_states)
+                dist = Categorical(probs)
+                new_logp = dist.log_prob(b_actions)
+                log_ratio = new_logp - b_oldlogp
+                ratio = torch.exp(log_ratio)
 
-                # TODO: compute new log probabilities by sampling actions from the policy distribution
-                new_logp = ...  # noqa: F841  # template placeholder
+                unclipped = ratio * b_adv
+                clipped = torch.clamp(ratio, 1.0 - self.clip_eps, 1.0 + self.clip_eps)
+                clipped = clipped * b_adv
+                policy_loss = -torch.min(unclipped, clipped).mean()
 
-                # TODO: compute the ratio of new log probabilities to old log probabilities
+                values_pred = self.value_fn(b_states)
+                # Enhancement 1: value clipping prevents large critic updates from
+                # undoing the conservative PPO policy update.
+                if self.value_clip:
+                    values_clipped = b_old_values + torch.clamp(
+                        values_pred - b_old_values, -self.clip_eps, self.clip_eps
+                    )
+                    value_loss_unclipped = F.mse_loss(
+                        values_pred, b_ret, reduction="none"
+                    )
+                    value_loss_clipped = F.mse_loss(
+                        values_clipped, b_ret, reduction="none"
+                    )
+                    value_loss = (
+                        0.5 * torch.max(value_loss_unclipped, value_loss_clipped).mean()
+                    )
+                else:
+                    value_loss = 0.5 * F.mse_loss(values_pred, b_ret)
 
-                # TODO: compute the clipped surrogate loss using the clipped objective
-                policy_loss = ...  # template placeholder
-
-                # TODO: compute value loss using mean squared error
-                value_loss = ...  # template placeholder
-
-                # TODO: compute entropy loss using the distribution's entropy
-                entropy_loss = ...  # template placeholder
+                entropy_loss = -dist.entropy().mean()
 
                 loss = (
                     policy_loss
@@ -155,6 +194,17 @@ class PPOAgent(AbstractAgent):
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
+
+                # Enhancement 2: approximate-KL early stopping avoids moving the
+                # policy too far from the data-collecting policy in one update.
+                if self.target_kl is not None:
+                    approx_kl = ((ratio - 1.0) - log_ratio).mean().item()
+                    if approx_kl > self.target_kl:
+                        stop_early = True
+                        break
+
+            if stop_early:
+                break
 
         return policy_loss.item(), value_loss.item(), entropy_loss.item()
 
@@ -201,11 +251,11 @@ class PPOAgent(AbstractAgent):
     ) -> Tuple[float, float]:
         returns = []
         for _ in range(num_episodes):
-            state, _ = eval_env.reset(seed=self.seed)
+            state, _ = eval_env.reset()
             done = False
             total_r = 0.0
             while not done:
-                action, _, _, _ = self.predict(state)
+                action, _, _, _ = self.predict(state, evaluate=True)
                 state, r, term, trunc, _ = eval_env.step(action)
                 done = term or trunc
                 total_r += r
@@ -228,6 +278,8 @@ def main(cfg: DictConfig) -> None:
         batch_size=cfg.agent.batch_size,
         ent_coef=cfg.agent.ent_coef,
         vf_coef=cfg.agent.vf_coef,
+        value_clip=cfg.agent.get("value_clip", True),
+        target_kl=cfg.agent.get("target_kl", 0.03),
         seed=cfg.seed,
         hidden_size=cfg.agent.hidden_size,
     )

@@ -1,0 +1,74 @@
+Week 6 - Level 2 observations
+=============================
+
+Setup
+-----
+We trained on LunarLander-v3 and compared three configurations:
+- actor_critic_gae: the Actor-Critic agent from Level 1 with GAE
+- ppo_vanilla: PPO without value clipping and without KL early stopping
+- ppo_enhanced: PPO with value clipping and approximate-KL early stopping
+
+All runs used seeds 0 and 1.  We trained for 3000 environment steps and
+evaluated every 1000 steps with three deterministic evaluation episodes.
+
+The PPO implementation includes the requested pieces:
+- clipped surrogate objective
+- value-function loss with vf_coef
+- entropy bonus with ent_coef
+- mini-batch updates over multiple epochs
+
+Enhancements
+------------
+We selected two implementation details from the PPO implementation-details blog:
+
+1. Value clipping
+   The critic target is compared against both the unclipped value estimate and a
+   value estimate clipped around the old prediction.  This prevents the critic
+   from taking a very large update while the policy update itself is meant to be
+   conservative.
+
+2. Approximate-KL early stopping
+   During PPO epochs we estimate the KL between the old and new policy from the
+   log-probability ratio.  If the KL becomes too large, we stop the remaining
+   PPO epochs for that batch of trajectory data.  This keeps one update from
+   moving too far away from the data-collecting policy.
+
+Observed results
+----------------
+Final evaluation means after 3000 steps:
+- actor_critic_gae: -225.9
+- ppo_vanilla: -671.9
+- ppo_enhanced: -671.9
+
+In this short run, Actor-Critic with GAE performed better than both PPO
+variants.  PPO did not have enough interaction steps to show its usual
+stability advantage.  PPO also reuses each on-policy trajectory for several
+epochs, so bad early trajectories can still dominate the update if the run is
+very short.
+
+The vanilla and enhanced PPO curves were identical in this small run.  That
+means the selected enhancements did not visibly change the policy over only
+3000 steps and two seeds.  The implementation is still useful because it exposes
+the correct controls, but the effect should be evaluated with longer training.
+
+Conceptual comparison
+---------------------
+Actor-Critic with GAE updates once per trajectory and uses a lower-variance
+advantage estimate than plain Monte Carlo returns.  This helped in the short
+LunarLander run.
+
+PPO adds an additional trust-region-like constraint through probability-ratio
+clipping.  This is meant to make updates more conservative than plain
+actor-critic.  The trade-off is that PPO often needs enough trajectory data and
+enough update cycles before the benefit becomes visible.
+
+Conclusion
+----------
+For this small Exercise run, GAE Actor-Critic was the best performer on
+LunarLander-v3.  PPO was implemented with the requested objective, losses,
+entropy term, mini-batches, value clipping, and KL early stopping, but the short
+training budget was too small to show a clear PPO advantage.
+
+To reproduce the CSV files and plots:
+
+.venv/bin/python -m rl_exercises.week_6.experiments --mode l2

@@ -26,6 +26,10 @@ agent:
   ent_coef: 0.01     # entropy bonus weight
   vf_coef: 0.5       # value-loss weight
 
+  # PPO implementation-detail enhancements for Week 6 Level 2
+  value_clip: true   # clip critic updates around old value estimates
+  target_kl: 0.03    # stop epochs early if approximate KL becomes too large
+
   # Network size
   hidden_size: 128
 

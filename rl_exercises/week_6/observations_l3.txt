@@ -1,0 +1,74 @@
+Week 6 - Level 3 observations
+=============================
+
+Setup
+-----
+We implemented Soft Actor-Critic and compared it against the Week 6 PPO agent
+on Pendulum-v1.
+
+Pendulum-v1 has a continuous one-dimensional torque action in [-2, 2].  SAC can
+act in this native continuous action space.  The PPO implementation from Level
+2 uses a categorical policy and therefore needs a discrete action space, so the
+PPO baseline uses a wrapper with 9 evenly spaced torque actions.
+
+The comparison is therefore not perfectly symmetric:
+- SAC: native continuous Pendulum-v1 action space
+- PPO: Pendulum-v1 with discretized torque actions
+
+Both agents used seeds 0 and 1, trained for 3000 environment steps, and were
+evaluated every 1000 steps with three deterministic evaluation episodes.
+
+SAC implementation
+------------------
+The SAC implementation contains the main algorithmic pieces:
+- a squashed Gaussian actor for bounded continuous actions;
+- two Q-functions and slowly updated target Q-functions;
+- an off-policy replay buffer;
+- entropy-regularized policy updates;
+- automatic entropy-temperature tuning with alpha.
+
+The actor samples actions with the reparameterization trick.  The tanh
+squashing correction is included in the log-probability calculation, which is
+important because the policy distribution changes after the tanh transform.
+
+Observed results
+----------------
+Final evaluation means after 3000 steps:
+- PPO with discretized actions: -1432.6
+- SAC with continuous actions: -1178.8
+
+Neither agent solved Pendulum in this small run, but SAC was clearly better at
+the final evaluation point.  SAC improved strongly between 2000 and 3000 steps,
+while PPO with discretized actions stayed more noisy.
+
+This result fits the expected sample-efficiency profile.  SAC is off-policy and
+can reuse transitions from the replay buffer many times.  PPO is on-policy and
+throws away old trajectory data after the update.  On a continuous-control task
+with only 3000 environment steps, replay is a major advantage.
+
+Paper discussion
+----------------
+The SAC paper argues that maximizing both reward and entropy gives more robust
+exploration and avoids premature convergence to a brittle deterministic policy.
+We can partially see that in the implementation: the actor is stochastic and
+the alpha temperature controls the entropy-reward trade-off automatically.
+
+The paper also emphasizes sample efficiency.  Our short Pendulum run supports
+this directionally: SAC reached a better final return than the on-policy PPO
+baseline under the same step budget.
+
+What we cannot verify from this small exercise run is the full asymptotic claim
+of the paper.  The original SAC results use longer training, more seeds, and
+larger continuous-control benchmarks.  Our run is enough to show the algorithmic
+difference, but not enough to claim that SAC has converged.
+
+Conclusion
+----------
+SAC is a better fit for Pendulum-v1 than the categorical PPO implementation
+because it works directly in the continuous action space and reuses experience
+off-policy.  In the short two-seed run, SAC achieved a better final evaluation
+return than PPO with discretized actions.
+
+To reproduce the CSV files and plots:
+
+.venv/bin/python -m rl_exercises.week_6.experiments --mode l3

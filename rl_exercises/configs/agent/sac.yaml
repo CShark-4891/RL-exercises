@@ -1,0 +1,23 @@
+# configs/agent/sac.yaml
+# Hydra-style defaults for the Week 6 SAC Level 3 implementation.
+
+env:
+  name: Pendulum-v1
+
+seed: 0
+
+agent:
+  actor_lr: 3e-4
+  critic_lr: 3e-4
+  alpha_lr: 3e-4
+  gamma: 0.99
+  tau: 0.005
+  buffer_capacity: 50000
+  batch_size: 64
+  learning_starts: 256
+  hidden_size: 64
+
+train:
+  total_steps: 3000
+  eval_interval: 1000
+  eval_episodes: 3
