@@ -105,7 +105,8 @@ class ReplayBuffer(AbstractBuffer):
         """
         if batch_size > len(self):
             raise ValueError("Cannot sample more transitions than are stored")
-        idxs = np.random.choice(len(self.states), size=batch_size, replace=False)
+        idxs = np.random.choice(
+            len(self.states), size=batch_size, replace=False)
         return [self._transition_at(int(i)) for i in idxs]
 
     def __len__(self) -> int:
@@ -169,7 +170,8 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         scaled_priorities = priorities**self.alpha
         total_priority = scaled_priorities.sum()
         if total_priority <= 0:
-            probabilities = np.full(len(self), 1.0 / len(self), dtype=np.float64)
+            probabilities = np.full(
+                len(self), 1.0 / len(self), dtype=np.float64)
         else:
             probabilities = scaled_priorities / total_priority
 
@@ -186,7 +188,8 @@ class PrioritizedReplayBuffer(ReplayBuffer):
             enriched_info = dict(info)
             enriched_info["buffer_index"] = int(idx)
             enriched_info["sampling_weight"] = float(weight)
-            batch.append((state, action, reward, next_state, done, enriched_info))
+            batch.append(
+                (state, action, reward, next_state, done, enriched_info))
         return batch
 
     def update_priorities(
@@ -194,4 +197,5 @@ class PrioritizedReplayBuffer(ReplayBuffer):
     ) -> None:
         """Update priorities after a learning step."""
         for index, priority in zip(indices, priorities):
-            self.priorities[int(index)] = float(abs(priority) + self.priority_epsilon)
+            self.priorities[int(index)] = float(
+                abs(priority) + self.priority_epsilon)

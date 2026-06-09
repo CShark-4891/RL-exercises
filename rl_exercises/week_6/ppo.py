@@ -73,7 +73,8 @@ class PPOAgent(AbstractAgent):
         self.target_kl = target_kl
 
         # networks
-        self.policy = Policy(env.observation_space, env.action_space, hidden_size)
+        self.policy = Policy(env.observation_space,
+                             env.action_space, hidden_size)
         self.value_fn = ValueNetwork(env.observation_space, hidden_size)
 
         # combined optimizer with separate lr for actor and critic
@@ -110,14 +111,16 @@ class PPOAgent(AbstractAgent):
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         values = values.detach().view(-1)
         next_values = next_values.detach().view(-1)
-        rewards_t = torch.tensor(rewards, dtype=torch.float32, device=values.device)
+        rewards_t = torch.tensor(
+            rewards, dtype=torch.float32, device=values.device)
         dones = dones.to(device=values.device, dtype=torch.float32).view(-1)
 
         deltas = rewards_t + self.gamma * next_values * (1.0 - dones) - values
         advantages = torch.zeros_like(deltas)
         gae = 0.0
         for t in reversed(range(len(rewards))):
-            gae = deltas[t] + self.gamma * self.gae_lambda * (1.0 - dones[t]) * gae
+            gae = deltas[t] + self.gamma * \
+                self.gae_lambda * (1.0 - dones[t]) * gae
             advantages[t] = gae
 
         returns = advantages + values
@@ -128,18 +131,21 @@ class PPOAgent(AbstractAgent):
 
     def update(self, trajectory: List[Any]) -> None:
         # unpack trajectory
-        states = torch.stack([torch.from_numpy(t[0]).float() for t in trajectory])
+        states = torch.stack([torch.from_numpy(t[0]).float()
+                             for t in trajectory])
         actions = torch.tensor([t[1] for t in trajectory])
         old_logps = torch.stack([t[2] for t in trajectory]).detach()
         entropies = torch.stack([t[3] for t in trajectory]).detach()  # noqa: F841
         rewards = [t[4] for t in trajectory]
         dones = torch.tensor([t[5] for t in trajectory], dtype=torch.float32)
-        next_states = torch.stack([torch.from_numpy(t[6]).float() for t in trajectory])
+        next_states = torch.stack(
+            [torch.from_numpy(t[6]).float() for t in trajectory])
 
         with torch.no_grad():
             values = self.value_fn(states)
             next_values = self.value_fn(next_states)
-        advantages, returns = self.compute_gae(rewards, values, next_values, dones)
+        advantages, returns = self.compute_gae(
+            rewards, values, next_values, dones)
 
         dataset = torch.utils.data.TensorDataset(
             states, actions, old_logps, advantages, returns, values.detach()
@@ -161,7 +167,8 @@ class PPOAgent(AbstractAgent):
                 ratio = torch.exp(log_ratio)
 
                 unclipped = ratio * b_adv
-                clipped = torch.clamp(ratio, 1.0 - self.clip_eps, 1.0 + self.clip_eps)
+                clipped = torch.clamp(
+                    ratio, 1.0 - self.clip_eps, 1.0 + self.clip_eps)
                 clipped = clipped * b_adv
                 policy_loss = -torch.min(unclipped, clipped).mean()
 
@@ -179,7 +186,8 @@ class PPOAgent(AbstractAgent):
                         values_clipped, b_ret, reduction="none"
                     )
                     value_loss = (
-                        0.5 * torch.max(value_loss_unclipped, value_loss_clipped).mean()
+                        0.5 * torch.max(value_loss_unclipped,
+                                        value_loss_clipped).mean()
                     )
                 else:
                     value_loss = 0.5 * F.mse_loss(values_pred, b_ret)
@@ -232,7 +240,8 @@ class PPOAgent(AbstractAgent):
                 step_count += 1
 
                 if step_count % eval_interval == 0:
-                    mean_r, std_r = self.evaluate(eval_env, num_episodes=eval_episodes)
+                    mean_r, std_r = self.evaluate(
+                        eval_env, num_episodes=eval_episodes)
                     print(
                         f"[Eval ] Step {step_count:6d} AvgReturn {mean_r:5.1f} ± {std_r:4.1f}"
                     )

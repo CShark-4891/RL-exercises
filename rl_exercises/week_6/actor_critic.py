@@ -52,13 +52,16 @@ class ActorCriticAgent(AbstractAgent):
         self.baseline_decay = baseline_decay
 
         # policy
-        self.policy = Policy(env.observation_space, env.action_space, hidden_size)
-        self.policy_optimizer = optim.Adam(self.policy.parameters(), lr=lr_actor)
+        self.policy = Policy(env.observation_space,
+                             env.action_space, hidden_size)
+        self.policy_optimizer = optim.Adam(
+            self.policy.parameters(), lr=lr_actor)
 
         # critic for 'value' and 'gae'
         if baseline_type in ("value", "gae"):
             self.value_fn = ValueNetwork(env.observation_space, hidden_size)
-            self.value_optimizer = optim.Adam(self.value_fn.parameters(), lr=lr_critic)
+            self.value_optimizer = optim.Adam(
+                self.value_fn.parameters(), lr=lr_critic)
 
         # running average baseline for 'avg'
         if baseline_type == "avg":
@@ -107,7 +110,8 @@ class ActorCriticAgent(AbstractAgent):
         dones: List[bool],
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         states_t = torch.as_tensor(np.asarray(states), dtype=torch.float32)
-        next_states_t = torch.as_tensor(np.asarray(next_states), dtype=torch.float32)
+        next_states_t = torch.as_tensor(
+            np.asarray(next_states), dtype=torch.float32)
         rewards_t = torch.tensor(rewards, dtype=torch.float32)
         dones_t = torch.tensor(dones, dtype=torch.float32)
 
@@ -115,11 +119,13 @@ class ActorCriticAgent(AbstractAgent):
             values = self.value_fn(states_t)
             next_values = self.value_fn(next_states_t)
 
-        deltas = rewards_t + self.gamma * next_values * (1.0 - dones_t) - values
+        deltas = rewards_t + self.gamma * \
+            next_values * (1.0 - dones_t) - values
         advantages = torch.zeros_like(deltas)
         gae = 0.0
         for t in reversed(range(len(rewards))):
-            gae = deltas[t] + self.gamma * self.gae_lambda * (1.0 - dones_t[t]) * gae
+            gae = deltas[t] + self.gamma * \
+                self.gae_lambda * (1.0 - dones_t[t]) * gae
             advantages[t] = gae
 
         returns = advantages + values
@@ -132,7 +138,8 @@ class ActorCriticAgent(AbstractAgent):
         self,
         trajectory: List[Tuple[np.ndarray, int, float, np.ndarray, bool, Any]],
     ) -> Tuple[float, float]:
-        states, actions, rewards, next_states, dones, log_probs = zip(*trajectory)
+        states, actions, rewards, next_states, dones, log_probs = zip(
+            *trajectory)
 
         # select advantage method
         if self.baseline_type == "gae":
@@ -223,7 +230,8 @@ class ActorCriticAgent(AbstractAgent):
                 step_count += 1
 
                 if step_count % eval_interval == 0:
-                    mean_r, std_r = self.evaluate(eval_env, num_episodes=eval_episodes)
+                    mean_r, std_r = self.evaluate(
+                        eval_env, num_episodes=eval_episodes)
                     print(
                         f"[Eval ] Step {step_count:6d} AvgReturn {mean_r:5.1f} ± {std_r:4.1f}"
                     )

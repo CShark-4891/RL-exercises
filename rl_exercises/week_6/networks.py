@@ -48,6 +48,9 @@ class ValueNetwork(nn.Module):  # critic network
         self.fc1 = nn.Linear(self.state_dim, hidden_size)
         self.fc2 = nn.Linear(hidden_size, 1)
 
+        self.fc1 = nn.Linear(self.state_dim, hidden_size)
+        self.fc2 = nn.Linear(hidden_size, 1)
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Compute scalar value estimates for given input state(s).
@@ -63,7 +66,8 @@ class ValueNetwork(nn.Module):  # critic network
             Estimated state values as a tensor of shape (batch_size,) or a scalar.
         """
         if isinstance(x, np.ndarray):
-            x = torch.as_tensor(x, dtype=torch.float32, device=self.fc1.weight.device)
+            x = torch.as_tensor(x, dtype=torch.float32,
+                                device=self.fc1.weight.device)
         else:
             x = x.to(device=self.fc1.weight.device, dtype=torch.float32)
 
