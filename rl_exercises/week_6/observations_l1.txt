@@ -1,0 +1,82 @@
+Week 6 - Level 1 observations
+=============================
+
+Setup
+-----
+We trained the Actor-Critic agent on CartPole-v1 and LunarLander-v3.
+For both environments we compared the four requested baseline modes:
+- none
+- avg
+- value
+- gae
+
+The runs are intentionally small so they can be reproduced quickly.  We used
+seeds 0 and 1, trained for 3000 environment steps, and evaluated every 1000
+steps with three deterministic evaluation episodes.
+
+The policy and value networks used one hidden layer with 64 units.  We used
+gamma=0.99 and gae_lambda=0.95.
+
+Baseline intuition
+------------------
+The no-baseline version uses normalized Monte Carlo returns directly as the
+policy-gradient signal.  This is simple, but it can have high variance.
+
+The running-average baseline subtracts a scalar estimate of the recent return.
+In this implementation the advantages are normalized after subtracting the
+baseline.  Because subtracting a scalar offset is mostly removed by this
+normalization, the avg and none curves can look identical in short runs.
+
+The value baseline learns a critic V(s) and subtracts it from the return.  This
+should reduce variance if the critic is useful, but it can also add instability
+early in training if the critic is still inaccurate.
+
+GAE uses bootstrapped TD errors and gae_lambda to trade bias and variance.  In
+principle this is a better fit for actor-critic methods than full Monte Carlo
+returns, especially on harder tasks.
+
+CartPole results
+----------------
+Final evaluation means after 3000 steps:
+- none: 52.8
+- avg: 52.8
+- value: 38.3
+- gae: 23.0
+
+For CartPole, none and avg performed best in this short run.  The value
+baseline had one stronger intermediate result for seed 1, but its final average
+was lower.  GAE did not help on CartPole here.  The likely reason is that the
+run is very short and CartPole is simple enough that the extra critic/GAE
+machinery does not yet pay off.
+
+LunarLander results
+-------------------
+Final evaluation means after 3000 steps:
+- none: -478.0
+- avg: -478.0
+- value: -445.6
+- gae: -225.9
+
+On LunarLander, GAE was the best of the four baselines in this short run.  The
+environment is harder, rewards are noisier, and the episode dynamics are more
+complex than CartPole.  This is exactly the setting where variance reduction
+from a learned critic and GAE can become more useful.
+
+The learned value baseline improved over none/avg on average, but it was still
+much worse than GAE.  This suggests that using bootstrapped TD residuals gave a
+more useful advantage signal than subtracting Monte Carlo returns by the current
+critic alone.
+
+Conclusion
+----------
+The main result is that baseline usefulness depends on the task.  On simple
+CartPole, the no-baseline and running-average variants were enough in this
+short run.  On LunarLander, GAE gave the best final evaluation return.
+
+The results should still be treated as noisy because we only used two seeds and
+3000 steps.  The RLiable plots are useful because they show uncertainty across
+the two seeds, but longer training would be needed for a stronger claim.
+
+To reproduce the CSV files and plots:
+
+.venv/bin/python -m rl_exercises.week_6.experiments --mode l1

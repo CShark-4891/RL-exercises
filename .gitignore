@@ -141,4 +141,9 @@ rl_exercises/week_2/figures/mars_rover.png
 
 # Results
 results/
+!rl_exercises/week_6/results/
+!rl_exercises/week_6/results/**
 .vscode/settings.json
+
+# Battlesnake local learning state
+battlesnake_memory.json

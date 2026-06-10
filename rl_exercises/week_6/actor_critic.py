@@ -38,7 +38,7 @@ class ActorCriticAgent(AbstractAgent):
         lr_actor: float = 5e-4,
         lr_critic: float = 1e-3,
         gamma: float = 0.99,
-        gae_lambda: float = 0.95,  # FIXME: lambda for GAE
+        gae_lambda: float = 0.95,
         seed: int = 0,
         hidden_size: int = 128,
         baseline_type: str = "value",  # 'none', 'avg', 'value', or 'gae'
@@ -52,13 +52,16 @@ class ActorCriticAgent(AbstractAgent):
         self.baseline_decay = baseline_decay
 
         # policy
-        self.policy = Policy(env.observation_space, env.action_space, hidden_size)
-        self.policy_optimizer = optim.Adam(self.policy.parameters(), lr=lr_actor)
+        self.policy = Policy(env.observation_space,
+                             env.action_space, hidden_size)
+        self.policy_optimizer = optim.Adam(
+            self.policy.parameters(), lr=lr_actor)
 
         # critic for 'value' and 'gae'
         if baseline_type in ("value", "gae"):
             self.value_fn = ValueNetwork(env.observation_space, hidden_size)
-            self.value_optimizer = optim.Adam(self.value_fn.parameters(), lr=lr_critic)
+            self.value_optimizer = optim.Adam(
+                self.value_fn.parameters(), lr=lr_critic)
 
         # running average baseline for 'avg'
         if baseline_type == "avg":
@@ -86,16 +89,18 @@ class ActorCriticAgent(AbstractAgent):
     def compute_advantages(
         self, states: List[np.ndarray], rewards: List[float]
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        # TODO: convert rewards into discounted returns
+        returns = self.compute_returns(rewards)
+        states_t = torch.as_tensor(np.asarray(states), dtype=torch.float32)
 
-        # TODO: convert states list into a torch batch and compute state-values
+        with torch.no_grad():
+            values = self.value_fn(states_t)
 
-        # TODO: compute raw advantages = returns - values
+        advantages = returns - values
 
-        # TODO: normalize advantages to zero mean and unit variance and use 1e-8 for numerical stability
-
-        # return normalized advantages and returns
-        return None  # template placeholder
+        advantages = (advantages - advantages.mean()) / (
+            advantages.std(unbiased=False) + 1e-8
+        )
+        return advantages.detach(), returns.detach()
 
     def compute_gae(
         self,
@@ -104,25 +109,37 @@ class ActorCriticAgent(AbstractAgent):
         next_states: List[np.ndarray],
         dones: List[bool],
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        # TODO: compute values and next_values using your value_fn
+        states_t = torch.as_tensor(np.asarray(states), dtype=torch.float32)
+        next_states_t = torch.as_tensor(
+            np.asarray(next_states), dtype=torch.float32)
+        rewards_t = torch.tensor(rewards, dtype=torch.float32)
+        dones_t = torch.tensor(dones, dtype=torch.float32)
 
-        # TODO: compute deltas: one-step TD errors
+        with torch.no_grad():
+            values = self.value_fn(states_t)
+            next_values = self.value_fn(next_states_t)
 
-        # TODO: accumulate GAE advantages backwards
+        deltas = rewards_t + self.gamma * \
+            next_values * (1.0 - dones_t) - values
+        advantages = torch.zeros_like(deltas)
+        gae = 0.0
+        for t in reversed(range(len(rewards))):
+            gae = deltas[t] + self.gamma * \
+                self.gae_lambda * (1.0 - dones_t[t]) * gae
+            advantages[t] = gae
 
-        # TODO: compute returns using advantages and values
-
-        # TODO: normalize advantages to zero mean and unit variance and use 1e-8 for numerical stability
-
-        # TODO: advantages, returns  # replace with actual values (detach both to avoid re-entering the graph)
-
-        return None  # template placeholder
+        returns = advantages + values
+        advantages = (advantages - advantages.mean()) / (
+            advantages.std(unbiased=False) + 1e-8
+        )
+        return advantages.detach(), returns.detach()
 
     def update_agent(
         self,
         trajectory: List[Tuple[np.ndarray, int, float, np.ndarray, bool, Any]],
     ) -> Tuple[float, float]:
-        states, actions, rewards, next_states, dones, log_probs = zip(*trajectory)
+        states, actions, rewards, next_states, dones, log_probs = zip(
+            *trajectory)
 
         # select advantage method
         if self.baseline_type == "gae":
@@ -134,14 +151,12 @@ class ActorCriticAgent(AbstractAgent):
         elif self.baseline_type == "avg":
             ret = self.compute_returns(list(rewards))
 
-            # TODO: compute advantages by subtracting running return
-            adv = ...  # template placeholder
-
-            # TODO: normalize advantages to zero mean and unit variance and use 1e-8 for numerical stability
-            # (Reminder, use unbiased=False for torch tensors)
-
-            # TODO: update running return using baseline decay
-            # (x = baseline_decay * x + (1 - baseline_decay) * mean return)
+            adv = ret - self.running_return
+            adv = (adv - adv.mean()) / (adv.std(unbiased=False) + 1e-8)
+            self.running_return = (
+                self.baseline_decay * self.running_return
+                + (1.0 - self.baseline_decay) * ret.mean().item()
+            )
         else:
             ret = self.compute_returns(list(rewards))
             adv = (ret - ret.mean()) / (ret.std(unbiased=False) + 1e-8)
@@ -215,7 +230,8 @@ class ActorCriticAgent(AbstractAgent):
                 step_count += 1
 
                 if step_count % eval_interval == 0:
-                    mean_r, std_r = self.evaluate(eval_env, num_episodes=eval_episodes)
+                    mean_r, std_r = self.evaluate(
+                        eval_env, num_episodes=eval_episodes)
                     print(
                         f"[Eval ] Step {step_count:6d} AvgReturn {mean_r:5.1f} ± {std_r:4.1f}"
                     )
@@ -240,7 +256,7 @@ def main(cfg: DictConfig) -> None:
         lr_actor=cfg.agent.lr_actor,
         lr_critic=cfg.agent.lr_critic,
         gamma=cfg.agent.gamma,
-        gae_lambda=cfg.agent.get("gae_lambda", 0.95),  # FIXME
+        gae_lambda=cfg.agent.get("gae_lambda", 0.95),
         seed=cfg.seed,
         hidden_size=cfg.agent.hidden_size,
         baseline_type=cfg.agent.baseline_type,

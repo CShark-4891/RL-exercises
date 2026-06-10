@@ -132,14 +132,17 @@ class DQNAgent(AbstractAgent):
             else ("cuda" if torch.cuda.is_available() else "cpu")
         )
 
-        assert hasattr(env.observation_space, "shape"), "DQN needs vector observations"
-        assert hasattr(env.action_space, "n"), "DQN needs a discrete action space"
+        assert hasattr(env.observation_space,
+                       "shape"), "DQN needs vector observations"
+        assert hasattr(env.action_space,
+                       "n"), "DQN needs a discrete action space"
 
         obs_dim = env.observation_space.shape[0]
         n_actions = env.action_space.n
 
         # main Q‐network and frozen target
-        self.q = QNetwork(obs_dim, n_actions, hidden_dim, hidden_layers).to(self.device)
+        self.q = QNetwork(obs_dim, n_actions, hidden_dim,
+                          hidden_layers).to(self.device)
         self.target_q = QNetwork(obs_dim, n_actions, hidden_dim, hidden_layers).to(
             self.device
         )
@@ -294,10 +297,13 @@ class DQNAgent(AbstractAgent):
         # unpack
         states, actions, rewards, next_states, dones, _ = zip(*training_batch)
         infos = [transition[5] for transition in training_batch]
-        s = torch.as_tensor(np.array(states), dtype=torch.float32, device=self.device)
-        a = torch.as_tensor(np.array(actions), dtype=torch.int64, device=self.device)
+        s = torch.as_tensor(
+            np.array(states), dtype=torch.float32, device=self.device)
+        a = torch.as_tensor(np.array(actions),
+                            dtype=torch.int64, device=self.device)
         a = a.unsqueeze(1)
-        r = torch.as_tensor(np.array(rewards), dtype=torch.float32, device=self.device)
+        r = torch.as_tensor(np.array(rewards),
+                            dtype=torch.float32, device=self.device)
         s_next = torch.as_tensor(
             np.array(next_states), dtype=torch.float32, device=self.device
         )
@@ -316,7 +322,8 @@ class DQNAgent(AbstractAgent):
         with torch.no_grad():
             if self.double_dqn:
                 next_actions = self.q(s_next).argmax(dim=1, keepdim=True)
-                next_q = self.target_q(s_next).gather(1, next_actions).squeeze(1)
+                next_q = self.target_q(s_next).gather(
+                    1, next_actions).squeeze(1)
             else:
                 next_q = self.target_q(s_next).max(dim=1).values
             target = r + self.gamma * next_q * (1.0 - done_mask)
@@ -335,7 +342,8 @@ class DQNAgent(AbstractAgent):
             self.target_q.load_state_dict(self.q.state_dict())
 
         if hasattr(self.buffer, "update_priorities"):
-            indices = [info["buffer_index"] for info in infos if "buffer_index" in info]
+            indices = [info["buffer_index"]
+                       for info in infos if "buffer_index" in info]
             if indices:
                 priorities = td_errors.detach().abs().cpu().numpy()
                 self.buffer.update_priorities(  # type: ignore[attr-defined]
@@ -372,7 +380,8 @@ class DQNAgent(AbstractAgent):
             self.total_steps += 1
 
             # store and step
-            self.buffer.add(state, action, reward, next_state, done or truncated, {})
+            self.buffer.add(state, action, reward,
+                            next_state, done or truncated, {})
             state = next_state
             ep_reward += reward
 
@@ -399,7 +408,8 @@ class DQNAgent(AbstractAgent):
                     print(msg)
 
             if eval_interval > 0 and frame % eval_interval == 0:
-                avg = float(np.mean(recent_rewards[-10:])) if recent_rewards else 0.0
+                avg = float(
+                    np.mean(recent_rewards[-10:])) if recent_rewards else 0.0
                 self.training_history["frames"].append(float(frame))
                 self.training_history["mean_reward_10"].append(avg)
 
@@ -412,7 +422,8 @@ def save_training_history(history: Dict[str, List[float]], path: str | Path) -> 
     """Save frame-based training statistics to a CSV file."""
     path = Path(path)
     with path.open("w", newline="") as csv_file:
-        writer = csv.DictWriter(csv_file, fieldnames=["frames", "mean_reward_10"])
+        writer = csv.DictWriter(csv_file, fieldnames=[
+                                "frames", "mean_reward_10"])
         writer.writeheader()
         for frame, reward in zip(history["frames"], history["mean_reward_10"]):
             writer.writerow({"frames": int(frame), "mean_reward_10": reward})
