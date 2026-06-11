@@ -132,7 +132,8 @@ class TestRNDPPOAgent(unittest.TestCase):
             seed=1,
         )
         state, _ = self.env.reset()
-        self.assertEqual(agent_zero.get_rnd_bonus(state.astype(np.float32)), 0.0)
+        self.assertEqual(agent_zero.get_rnd_bonus(
+            state.astype(np.float32)), 0.0)
 
     # -------------------------------------------------------------------------
     # compute_gae()
@@ -163,7 +164,7 @@ class TestRNDPPOAgent(unittest.TestCase):
 
     def test_compute_gae_combined_normalized(self):
         """Combined advantages must be zero-mean and unit-std after normalization."""
-        T = 8
+        T = 80
         rewards_ext = list(range(T))
         rewards_int = [r * 0.1 for r in rewards_ext]
         combined, *_ = self.agent.compute_gae(
@@ -176,7 +177,8 @@ class TestRNDPPOAgent(unittest.TestCase):
             torch.zeros(T),
         )
         self.assertAlmostEqual(combined.mean().item(), 0.0, places=6)
-        self.assertAlmostEqual(combined.std(unbiased=False).item(), 1.0, places=6)
+        self.assertAlmostEqual(combined.std(
+            unbiased=False).item(), 1.0, places=6)
 
     def test_compute_gae_intrinsic_non_episodic(self):
         """
@@ -213,7 +215,8 @@ class TestRNDPPOAgent(unittest.TestCase):
         self.assertEqual(len(losses), 4)
         for i, loss in enumerate(losses):
             self.assertIsInstance(loss, float, f"loss[{i}] is not a float")
-            self.assertTrue(np.isfinite(loss), f"loss[{i}]={loss} is not finite")
+            self.assertTrue(np.isfinite(loss),
+                            f"loss[{i}]={loss} is not finite")
 
     # -------------------------------------------------------------------------
     # evaluate()

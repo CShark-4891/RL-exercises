@@ -74,6 +74,7 @@ class RNDPPOAgent(PPOAgent):
             hidden_size=hidden_size,
         )
 
+        self.return_history = []  # store trajectory for PPO updates
         self.rnd_update_freq = rnd_update_freq
         self.rnd_reward_weight = rnd_reward_weight
         self.update_proportion = update_proportion
@@ -98,15 +99,15 @@ class RNDPPOAgent(PPOAgent):
         for param in self.target_rnd.parameters():
             param.requires_grad = False
 
-        # TODO: Combined optimizer: policy + dual-head value + RND predictor
+        # DONE: Combined optimizer: policy + dual-head value + RND predictor
         combined_parameters = (
             list(self.policy.parameters())
             + list(self.value_fn.parameters())
             + list(self.predictor_rnd.parameters())
         )
 
-        # TODO: Optimizer for combined_parameters with learning rate combined_lr (Adam)
-        self.optimizer = ...
+        # DONE: Optimizer for combined_parameters with learning rate combined_lr (Adam)
+        self.optimizer = optim.Adam(combined_parameters, lr=combined_lr)
 
         # For normalization of observations and intrinsic rewards
         self.obs_rms = RunningMeanStd(shape=(obs_dim,))
@@ -143,15 +144,17 @@ class RNDPPOAgent(PPOAgent):
                 obs_norm = (next_state - self.obs_rms.mean) / np.sqrt(
                     self.obs_rms.var + 1e-8
                 )
-                int_reward_raw = self.get_rnd_bonus(obs_norm.astype(np.float32))
+                int_reward_raw = self.get_rnd_bonus(
+                    obs_norm.astype(np.float32))
 
                 # Feed into RewardForwardFilter to build up reward_rms
-                discounted = self.discounted_reward.update(np.array([int_reward_raw]))
+                discounted = self.discounted_reward.update(
+                    np.array([int_reward_raw]))
                 self.reward_rms.update(discounted)
 
         print("[Warmup] Done.")
 
-    def predict(
+    def predict_action(
         self, state: np.ndarray
     ) -> Tuple[int, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """
@@ -215,19 +218,20 @@ class RNDPPOAgent(PPOAgent):
         Tuple of: combined advantages, ext advantages, int advantages,
                   extrinsic returns, intrinsic returns.
         """
-        # TODO: compute gae for both extrinsic and intrinsic streams separately
+        # DONE: compute gae for both extrinsic and intrinsic streams separately
         # (Hint: extrinsic stream uses done mask; intrinsic stream is non-episodic — no done mask)
         rews_ext = torch.tensor(rewards_ext, dtype=torch.float32)
         rews_int = torch.tensor(rewards_int, dtype=torch.float32)
 
-        deltas_ext = ...
-        deltas_int = ...
+        deltas_ext = rews_ext + self.gamma * \
+            next_values_ext * (1 - dones) - values_ext
+        deltas_int = rews_int + self.gamma * next_values_int - values_int
 
         # GAE for extrinsic stream
         advs_ext: List[torch.Tensor] = []
         A = 0.0
         for delta, done in zip(reversed(deltas_ext), reversed(dones)):
-            A = ...
+            A = delta + self.gamma * self.gae_lambda * A * (1 - done)
             advs_ext.insert(0, A)
         advs_ext_t = torch.stack(advs_ext)
 
@@ -235,15 +239,17 @@ class RNDPPOAgent(PPOAgent):
         advs_int: List[torch.Tensor] = []
         A = 0.0
         for delta in reversed(deltas_int):
-            A = ...
+            A = delta + self.gamma * self.gae_lambda * A
             advs_int.insert(0, A)
         advs_int_t = torch.stack(advs_int)
 
-        returns_ext = ...
-        returns_int = ...
+        returns_ext = advs_ext_t + values_ext
+        returns_int = advs_int_t + values_int
 
-        # TODO: Combined advantages weighted by coefficients, then normalize
-        combined_advs = ...
+        # DONE: Combined advantages weighted by coefficients, then normalize
+        combined_advs = self.ext_coef * advs_ext_t + self.int_coef * advs_int_t
+        combined_advs = (combined_advs - combined_advs.mean()) / \
+            (combined_advs.std(unbiased=False) + 1e-8)
 
         return (
             combined_advs.detach(),
@@ -267,18 +273,18 @@ class RNDPPOAgent(PPOAgent):
         float
             The RND bonus for the state.
         """
-        # TODO: extract current state as a tensor
-        state_tensor = ...
+        # DONE: extract current state as a tensor
+        state_tensor = torch.from_numpy(state).float()
 
-        # TODO: compute MSE error between predictor and target embeddings as the bonus
+        # DONE: compute MSE error between predictor and target embeddings as the bonus
         with torch.no_grad():
-            target_emb = ...
-            predictor_emb = ...
-        error = ...
+            target_emb = self.target_rnd(state_tensor)
+            predictor_emb = self.predictor_rnd(state_tensor)
+        error = (target_emb - predictor_emb).pow(2).sum(-1).mean()
 
-        # TODO: scale by reward weight and return
-        bonus = ...
-        return bonus
+        # DONE: scale by reward weight and return
+        bonus = self.rnd_reward_weight * error
+        return bonus.item()
 
     def update(self, trajectory: List[Any]) -> Tuple[float, float, float, float]:
         """
@@ -294,20 +300,22 @@ class RNDPPOAgent(PPOAgent):
         Tuple[float, float, float, float]
             Policy loss, value loss, entropy loss, RND predictor loss.
         """
-        states = torch.stack([torch.from_numpy(t[0]).float() for t in trajectory])
+        states = torch.stack([torch.from_numpy(t[0]).float()
+                             for t in trajectory])
         actions = torch.tensor([t[1] for t in trajectory])
         old_logps = torch.stack([t[2] for t in trajectory]).detach()
         rewards_ext = [t[4] for t in trajectory]
         rewards_int = [t[5] for t in trajectory]
         dones = torch.tensor([t[6] for t in trajectory], dtype=torch.float32)
-        next_states = torch.stack([torch.from_numpy(t[7]).float() for t in trajectory])
+        next_states = torch.stack(
+            [torch.from_numpy(t[7]).float() for t in trajectory])
 
-        # TODO: compute values and next values for both extrinsic and intrinsic streams without grad
+        # DONE: compute values and next values for both extrinsic and intrinsic streams without grad
         with torch.no_grad():
-            values_ext, values_int = ...
-            next_values_ext, next_values_int = ...
+            values_ext, values_int = self.value_fn(states)
+            next_values_ext, next_values_int = self.value_fn(next_states)
 
-        # TODO: compute combined advantages and returns for extrinsic and intrinsic rewards
+        # DONE: compute combined advantages and returns for extrinsic and intrinsic rewards
         combined_advs, _, _, returns_ext, returns_int = self.compute_gae(
             rewards_ext,
             rewards_int,
@@ -327,24 +335,28 @@ class RNDPPOAgent(PPOAgent):
 
         for _ in range(self.epochs):
             for b_states, b_actions, b_oldlogp, b_adv, b_ret_ext, b_ret_int in loader:
-                # TODO: Policy loss (clipped PPO surrogate)
-                probs = ...
-                dist = ...
-                new_logp = ...
-                ratio = ...
-                policy_loss = ...
+                # DONE: Policy loss (clipped PPO surrogate)
+                probs = self.policy(b_states)
+                dist = Categorical(probs)
+                new_logp = dist.log_prob(b_actions)
+                ratio = torch.exp(new_logp - b_oldlogp)
+                policy_loss = - torch.min(ratio * b_adv, torch.clamp(
+                    ratio, 1 - self.clip_eps, 1 + self.clip_eps) * b_adv).mean()
 
-                # TODO: Dual-head value loss (MSE for both ext and int heads)
-                value_preds_ext, value_preds_int = ...
-                value_loss = ...
+                # DONE: Dual-head value loss (MSE for both ext and int heads)
+                value_preds_ext, value_preds_int = self.value_fn(b_states)
+                value_loss = F.mse_loss(
+                    value_preds_ext, b_ret_ext) + F.mse_loss(value_preds_int, b_ret_int)
 
-                # TODO: Entropy loss
-                entropy_loss = ...
+                # DONE: Entropy loss
+                entropy_loss = dist.entropy().mean()
 
-                # TODO: RND predictor loss with update_proportion mask
+                # DONE: RND predictor loss with update_proportion mask
                 # (only a random subset of minibatch transitions updates the predictor)
-                mask = ...
-                rnd_loss = ...
+                mask = torch.rand(len(b_states)) < self.update_proportion
+                rnd_loss = F.mse_loss(self.predictor_rnd(
+                    b_states), self.target_rnd(b_states).detach())
+                rnd_loss = (rnd_loss * mask.float()).mean()
 
                 loss = (
                     policy_loss
@@ -394,7 +406,7 @@ class RNDPPOAgent(PPOAgent):
             trajectory: List[Any] = []
 
             while not done and step_count < total_steps:
-                action, logp, entropy, _, _ = self.predict(state)
+                action, logp, entropy, _, _ = self.predict_action(state)
                 next_state, ext_reward, term, trunc, _ = self.env.step(action)
                 done = term or trunc
 
@@ -404,13 +416,16 @@ class RNDPPOAgent(PPOAgent):
                     self.obs_rms.var + 1e-8
                 )
 
-                # TODO: --- Intrinsic reward (RND bonus on normalized obs) ---
-                int_reward_raw = self.get_rnd_bonus(obs_norm.astype(np.float32))
+                # DONE: --- Intrinsic reward (RND bonus on normalized obs) ---
+                int_reward_raw = self.get_rnd_bonus(
+                    obs_norm.astype(np.float32))
 
                 # --- Normalize intrinsic reward via RewardForwardFilter + RunningMeanStd ---
-                discounted = self.discounted_reward.update(np.array([int_reward_raw]))
+                discounted = self.discounted_reward.update(
+                    np.array([int_reward_raw]))
                 self.reward_rms.update(discounted)
-                int_reward = int_reward_raw / np.sqrt(self.reward_rms.var + 1e-8)
+                int_reward = int_reward_raw / \
+                    np.sqrt(self.reward_rms.var + 1e-8)
 
                 trajectory.append(
                     (
@@ -429,15 +444,20 @@ class RNDPPOAgent(PPOAgent):
                 self.rnd_update_counter += 1
 
                 if step_count % eval_interval == 0:
-                    mean_r, std_r = self.evaluate(eval_env, num_episodes=eval_episodes)
+                    mean_r, std_r = self.evaluate(
+                        eval_env, num_episodes=eval_episodes)
                     print(
                         f"[Eval ] Step {step_count:6d} AvgReturn {mean_r:5.1f} ± {std_r:4.1f}"
                     )
 
             # PPO + RND update
-            policy_loss, value_loss, entropy_loss, rnd_loss = self.update(trajectory)
+            policy_loss, value_loss, entropy_loss, rnd_loss = self.update(
+                trajectory)
 
             total_return = sum(t[4] for t in trajectory)
+
+            self.return_history.append(total_return)
+
             print(
                 f"[Train] Step {step_count:6d} Return {total_return:5.1f} "
                 f"Policy Loss {policy_loss:.3f} Value Loss {value_loss:.3f} "
@@ -470,7 +490,7 @@ class RNDPPOAgent(PPOAgent):
             done = False
             total_r = 0.0
             while not done:
-                action, _, _, _, _ = self.predict(state)
+                action, _, _, _, _ = self.predict_action(state)
                 state, r, term, trunc, _ = eval_env.step(action)
                 done = term or trunc
                 total_r += r

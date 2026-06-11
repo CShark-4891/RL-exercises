@@ -124,6 +124,7 @@ class DQNAgent(AbstractAgent):
             seed,
         )
         self.env = env
+        self.seed = seed
         set_seed(env, seed)
         self.rng = np.random.default_rng(seed)
         self.device = torch.device(

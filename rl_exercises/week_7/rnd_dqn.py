@@ -90,11 +90,13 @@ class RNDDQNAgent(DQNAgent):
             target_update_freq,
             seed,
         )
+
+        self.reward_history = []  # store episode rewards for visualization
         self.env = env
         self.seed = seed
         set_seed(env, seed)
 
-        # TODO: initialize the RND networks including target network, predictor network, and the optimizer for the predictor
+        # DONE: initialize the RND networks including target network, predictor network, and the optimizer for the predictor
         self.rnd_update_freq = rnd_update_freq
         self.rnd_reward_weight = rnd_reward_weight
 
@@ -102,11 +104,14 @@ class RNDDQNAgent(DQNAgent):
         output_dim = rnd_hidden_size
 
         # Target network is frozen, predictor is trained to match it
-        self.target_network_rnd = ...
-        self.predictor_network_rnd = ...
+        self.target_network_rnd = TargetNetwork(
+            obs_dim=obs_dim, output_dim=output_dim, hidden_dim=rnd_hidden_size, n_layers=rnd_n_layers)
+        self.predictor_network_rnd = PredictorNetwork(
+            obs_dim=obs_dim, output_dim=output_dim, hidden_dim=rnd_hidden_size, n_layers=rnd_n_layers)
 
         # Optimizer for the predictor network
-        self.rnd_optimizer = ...
+        self.rnd_optimizer = torch.optim.Adam(
+            self.predictor_network_rnd.parameters(), lr=rnd_lr)
 
     def update_rnd(
         self, training_batch: List[Tuple[Any, Any, float, Any, bool, Dict]]
@@ -119,18 +124,18 @@ class RNDDQNAgent(DQNAgent):
         training_batch : list of transitions
             Each is (state, action, reward, next_state, done, info).
         """
-        # TODO: get next_states from the batch
+        # DONE: get next_states from the batch
         _, _, _, next_states, _, _ = zip(*training_batch)
-        next_states = ...
+        next_states = torch.tensor(next_states, dtype=torch.float32)
 
-        # TODO: compute the MSE between target and predictor embeddings
+        # DONE: compute the MSE between target and predictor embeddings
         with torch.no_grad():
-            target_embeddings = ...
+            target_embeddings = self.target_network_rnd(next_states)
         self.rnd_optimizer.zero_grad()
-        predictor_embeddings = ...
-        mse = ...
+        predictor_embeddings = self.predictor_network_rnd(next_states)
+        mse = nn.MSELoss()(predictor_embeddings, target_embeddings)
 
-        # TODO: update the RND network
+        # DONE: update the RND network
         mse.backward()
         self.rnd_optimizer.step()
 
@@ -149,17 +154,19 @@ class RNDDQNAgent(DQNAgent):
         float
             The RND bonus for the state.
         """
-        # TODO: extract current state as a tensor
-        state_tensor = ...
+        # DONE: extract current state as a tensor
+        state_tensor = torch.tensor(state, dtype=torch.float32)
 
-        # TODO: compute MSE error between predictor and target embeddings as the bonus
+        # DONE: compute MSE error between predictor and target embeddings as the bonus
         with torch.no_grad():
-            target_embedding = ...
-            predictor_embedding = ...
-        error = ...
+            target_embedding = self.target_network_rnd(
+                state_tensor.unsqueeze(0))
+            predictor_embedding = self.predictor_network_rnd(
+                state_tensor.unsqueeze(0))
+        error = nn.MSELoss()(predictor_embedding, target_embedding)
 
-        # TODO: scale by reward weight and return
-        bonus = ...
+        # DONE: scale by reward weight and return
+        bonus = self.rnd_reward_weight * error.item()
         return bonus
 
     def train(self, num_frames: int, eval_interval: int = 1000) -> None:
@@ -183,12 +190,13 @@ class RNDDQNAgent(DQNAgent):
             action = self.predict_action(state)
             next_state, reward, done, truncated, _ = self.env.step(action)
 
-            # TODO: apply RND bonus
-            # (TODO just the RND bonus, the other part of training loop is provided)
-            reward += ...
+            # DONE: apply RND bonus
+            # (DONE just the RND bonus, the other part of training loop is provided)
+            reward += self.get_rnd_bonus(state)
 
             # store and step
-            self.buffer.add(state, action, reward, next_state, done or truncated, {})
+            self.buffer.add(state, action, reward,
+                            next_state, done or truncated, {})
             state = next_state
             ep_reward += reward
 
@@ -204,6 +212,7 @@ class RNDDQNAgent(DQNAgent):
                 state, _ = self.env.reset()
                 recent_rewards.append(ep_reward)
                 episode_rewards.append(ep_reward)
+                self.reward_history.append(ep_reward)
                 steps.append(frame)
                 ep_reward = 0.0
                 # logging
@@ -242,6 +251,15 @@ def main(cfg: DictConfig):
     )
 
     agent.train(cfg.train.num_frames, cfg.train.eval_interval)
+
+    # visualize training rewards
+    # import matplotlib.pyplot as plt
+    print(agent)
+
+    # plt.xlabel("Frames")
+    # plt.ylabel("Reward")
+    # plt.title("Training Rewards")
+    # plt.show()
 
 
 if __name__ == "__main__":

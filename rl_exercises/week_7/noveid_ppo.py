@@ -159,15 +159,15 @@ class NovelDPPOAgent(PPOAgent):
         for param in self.target_rnd.parameters():
             param.requires_grad = False
 
-        # TODO: Single combined optimizer: policy + dual-head value + RND predictor
+        # DONE: Single combined optimizer: policy + dual-head value + RND predictor
         combined_parameters = (
             list(self.policy.parameters())
             + list(self.value_fn.parameters())
             + list(self.predictor_rnd.parameters())
         )
 
-        # TODO: Optimizer for combined_parameters with learning rate combined_lr (Adam)
-        self.optimizer = ...
+        # DONE: Optimizer for combined_parameters with learning rate combined_lr (Adam)
+        self.optimizer = optim.Adam(combined_parameters, lr=combined_lr)
 
         # Running statistics for observation and intrinsic reward normalization
         self.obs_rms = RunningMeanStd(shape=(obs_dim,))
@@ -186,11 +186,11 @@ class NovelDPPOAgent(PPOAgent):
     def _rnd_error(self, obs_norm: np.ndarray) -> float:
         """Compute raw RND prediction error for a single normalized observation."""
         t = torch.from_numpy(obs_norm).float().unsqueeze(0)
-        # TODO: Compute RND prediction error (MSE) between predictor and target embeddings
+        # DONE: Compute RND prediction error (MSE) between predictor and target embeddings
         with torch.no_grad():
-            target_emb = ...
-            predictor_emb = ...
-        return ...
+            target_emb = self.target_rnd(t)
+            predictor_emb = self.predictor_rnd(t)
+        return (target_emb - predictor_emb).pow(2).sum(-1).mean().item()
 
     def _is_first_visit(self, obs: np.ndarray) -> bool:
         """
@@ -227,13 +227,13 @@ class NovelDPPOAgent(PPOAgent):
         float
             NovelD intrinsic reward (0 if not first visit).
         """
-        # TODO: compute NovelD bonus using the formula above
+        # DONE: compute NovelD bonus using the formula above
         # Hint: use self._rnd_error() for novelty and self._is_first_visit() for the first-visit indicator
         if not self._is_first_visit(next_state):
             return 0.0
-        novelty_next = ...
-        novelty_curr = ...
-        bonus = ...
+        novelty_next = self._rnd_error(next_state)
+        novelty_curr = self._rnd_error(state)
+        bonus = max(novelty_next - self.noveld_alpha * novelty_curr, 0.0)
         return bonus
 
     def _init_obs_normalization(self) -> None:
@@ -273,7 +273,8 @@ class NovelDPPOAgent(PPOAgent):
                     int_reward_raw = self._rnd_error(next_obs_norm)
 
                 # Update reward running stats via RewardForwardFilter
-                discounted = self.discounted_reward.update(np.array([int_reward_raw]))
+                discounted = self.discounted_reward.update(
+                    np.array([int_reward_raw]))
                 self.reward_rms.update(discounted)
 
                 prev_obs_norm = next_obs_norm
@@ -344,19 +345,20 @@ class NovelDPPOAgent(PPOAgent):
         Tuple of: combined advantages, ext advantages, int advantages,
                   extrinsic returns, intrinsic returns.
         """
-        # TODO: compute gae for both extrinsic and intrinsic streams separately
+        # DONE: compute gae for both extrinsic and intrinsic streams separately
         # (Hint: extrinsic stream uses done mask; intrinsic stream is non-episodic — no done mask)
         rews_ext = torch.tensor(rewards_ext, dtype=torch.float32)
         rews_int = torch.tensor(rewards_int, dtype=torch.float32)
 
-        deltas_ext = ...
-        deltas_int = ...
+        deltas_ext = rews_ext + self.gamma * \
+            next_values_ext * (1 - dones) - values_ext
+        deltas_int = rews_int + self.gamma * next_values_int - values_int
 
         # GAE for extrinsic stream (episodic: done mask applied)
         advs_ext: List[torch.Tensor] = []
         A = 0.0
         for delta, done in zip(reversed(deltas_ext), reversed(dones)):
-            A = ...
+            A = delta + self.gamma * self.gae_lambda * A * (1 - done)
             advs_ext.insert(0, A)
         advs_ext_t = torch.stack(advs_ext)
 
@@ -364,15 +366,17 @@ class NovelDPPOAgent(PPOAgent):
         advs_int: List[torch.Tensor] = []
         A = 0.0
         for delta in reversed(deltas_int):
-            A = ...
+            A = delta + self.gamma * self.gae_lambda * A
             advs_int.insert(0, A)
         advs_int_t = torch.stack(advs_int)
 
-        returns_ext = ...
-        returns_int = ...
+        returns_ext = advs_ext_t + values_ext
+        returns_int = advs_int_t + values_int
 
-        # TODO: Combined advantages weighted by coefficients, then normalize
-        combined_advs = ...
+        # DONE: Combined advantages weighted by coefficients, then normalize
+        combined_advs = self.ext_coef * advs_ext_t + self.int_coef * advs_int_t
+        combined_advs = (combined_advs - combined_advs.mean()) / \
+            (combined_advs.std(unbiased=False) + 1e-8)
 
         return (
             combined_advs.detach(),
@@ -397,20 +401,22 @@ class NovelDPPOAgent(PPOAgent):
         Tuple[float, float, float, float]
             Policy loss, value loss, entropy loss, RND predictor loss.
         """
-        states = torch.stack([torch.from_numpy(t[0]).float() for t in trajectory])
+        states = torch.stack([torch.from_numpy(t[0]).float()
+                             for t in trajectory])
         actions = torch.tensor([t[1] for t in trajectory])
         old_logps = torch.stack([t[2] for t in trajectory]).detach()
         rewards_ext = [t[4] for t in trajectory]
         rewards_int = [t[5] for t in trajectory]
         dones = torch.tensor([t[6] for t in trajectory], dtype=torch.float32)
-        next_states = torch.stack([torch.from_numpy(t[7]).float() for t in trajectory])
+        next_states = torch.stack(
+            [torch.from_numpy(t[7]).float() for t in trajectory])
 
-        # TODO: compute values and next values for both extrinsic and intrinsic streams without grad
+        # DONE: compute values and next values for both extrinsic and intrinsic streams without grad
         with torch.no_grad():
-            values_ext, values_int = ...
-            next_values_ext, next_values_int = ...
+            values_ext, values_int = self.value_fn(states)
+            next_values_ext, next_values_int = self.value_fn(next_states)
 
-        # TODO: compute combined advantages and returns for extrinsic and intrinsic rewards
+        # DONE: compute combined advantages and returns for extrinsic and intrinsic rewards
         combined_advs, _, _, returns_ext, returns_int = self.compute_gae(
             rewards_ext,
             rewards_int,
@@ -430,24 +436,30 @@ class NovelDPPOAgent(PPOAgent):
 
         for _ in range(self.epochs):
             for b_states, b_actions, b_oldlogp, b_adv, b_ret_ext, b_ret_int in loader:
-                # TODO: --- Policy loss (clipped PPO surrogate) ---
-                probs = ...
-                dist = ...
-                new_logp = ...
-                ratio = ...
-                policy_loss = ...
+                # DONE: --- Policy loss (clipped PPO surrogate) ---
+                probs = self.policy(b_states)
+                dist = Categorical(probs)
+                new_logp = dist.log_prob(b_actions)
+                ratio = torch.exp(new_logp - b_oldlogp)
+                clip_ratio = torch.clamp(
+                    ratio, 1 - self.clip_eps, 1 + self.clip_eps)
+                policy_loss = -torch.min(ratio * b_adv,
+                                         clip_ratio * b_adv).mean()
 
-                # TODO: --- Dual-head value loss (MSE for both ext and int heads) ---
-                value_preds_ext, value_preds_int = ...
-                value_loss = ...
+                # DONE: --- Dual-head value loss (MSE for both ext and int heads) ---
+                value_preds_ext, value_preds_int = self.value_fn(b_states)
+                value_loss = nn.MSELoss()(value_preds_ext, b_ret_ext) + \
+                    nn.MSELoss()(value_preds_int, b_ret_int)
 
-                # TODO: --- Entropy loss ---
-                entropy_loss = ...
+                # DONE: --- Entropy loss ---
+                entropy_loss = dist.entropy().mean()
 
-                # TODO: --- RND predictor loss (update_proportion mask) ---
+                # DONE: --- RND predictor loss (update_proportion mask) ---
                 # Only a random subset of the minibatch is used to update the predictor
-                mask = ...
-                rnd_loss = ...
+                mask = torch.rand(b_states.size(0)) < self.update_proportion
+                rnd_loss = F.mse_loss(self.predictor_rnd(
+                    b_states), self.target_rnd(b_states).detach())
+                rnd_loss = (rnd_loss * mask.float()).mean()
 
                 loss = (
                     policy_loss
@@ -518,14 +530,17 @@ class NovelDPPOAgent(PPOAgent):
                 self.obs_rms.update(next_state[np.newaxis])
                 next_obs_norm = self._normalize_obs(next_state)
 
-                # TODO: --- NovelD intrinsic reward ---
+                # DONE: --- NovelD intrinsic reward ---
                 # max(novelty(s_{t+1}) - alpha * novelty(s_t), 0) * first_visit(s_{t+1})
-                int_reward_raw = self.get_noveld_bonus(prev_obs_norm, next_obs_norm)
+                int_reward_raw = self.get_noveld_bonus(
+                    prev_obs_norm, next_obs_norm)
 
                 # --- Normalize intrinsic reward scale ---
-                discounted = self.discounted_reward.update(np.array([int_reward_raw]))
+                discounted = self.discounted_reward.update(
+                    np.array([int_reward_raw]))
                 self.reward_rms.update(discounted)
-                int_reward = int_reward_raw / np.sqrt(self.reward_rms.var + 1e-8)
+                int_reward = int_reward_raw / \
+                    np.sqrt(self.reward_rms.var + 1e-8)
 
                 trajectory.append(
                     (
@@ -545,13 +560,15 @@ class NovelDPPOAgent(PPOAgent):
                 step_count += 1
 
                 if step_count % eval_interval == 0:
-                    mean_r, std_r = self.evaluate(eval_env, num_episodes=eval_episodes)
+                    mean_r, std_r = self.evaluate(
+                        eval_env, num_episodes=eval_episodes)
                     print(
                         f"[Eval ] Step {step_count:6d} AvgReturn {mean_r:5.1f} ± {std_r:4.1f}"
                     )
 
             # PPO + RND predictor update
-            policy_loss, value_loss, entropy_loss, rnd_loss = self.update(trajectory)
+            policy_loss, value_loss, entropy_loss, rnd_loss = self.update(
+                trajectory)
 
             total_return = sum(t[4] for t in trajectory)
             print(
